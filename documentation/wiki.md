@@ -14,7 +14,7 @@ Any error messages are displayed in the status bar (bottom left)
 
 ## Experimental Pattern Selection
 
-![PatternLoadInfo.png](tutorial_images/PatternLoadInfo.PNG)
+![PatternLoadInfo.png](tutorial_images/PatternLoadInfo.png)
 
   1. Load a pattern file with the "..."" button); the pattern dimensions, pixel type, and number of patterns will be displayed in the *Pattern Info* box. Additional scan information will be loaded if the pattern file is
     * an HDF5 file with an EBSD scan (standard across vendors)
@@ -31,7 +31,7 @@ Any error messages are displayed in the status bar (bottom left)
      * 1 - regular (not adaptive) histogram equalization
      * &gt;1 - number of AHE tiles
 
-![PatternLoadProc.png](tutorial_images/PatternLoadProc.PNG)
+![PatternLoadProc.png](tutorial_images/PatternLoadProc.png)
 
 
 
@@ -40,7 +40,7 @@ Any error messages are displayed in the status bar (bottom left)
    
 Patterns to be indexed are shown in the top half with available patterns in the bottom half. Double click master patterns to move them between the 2 boxes (or [un]tick the checkbox on OS X and Linux) Use the up/down arrows to re-order patterns for multi phase indexing (choose phase 0, 1, 2, ...). The file browse button (center right) adds individual master patterns to the indexing list and the folder browse button (bottom right) adds all master pattern files in the selected directory (recursively) to the library. Use the delete button (bottom left) to remove patterns from the library and the search button (bottom left) to filter the library display. The search bar filters files using the file name (full path, case insensitive).
 
-![MasterPatternFilt.png](tutorial_images/MasterPatternFilt.PNG)
+![MasterPatternFilt.png](tutorial_images/MasterPatternFilt.png)
 
 
 ## Detector Geometry
@@ -50,14 +50,14 @@ Patterns to be indexed are shown in the top half with available patterns in the 
   3. Input the pattern center using the selected convention (or verify the center loaded from a scan file on the first page).
   4. Optionally refine the pattern center with the *fit...* button (not yet implemented in this version of the wizard).
 
-![PatternCenter.png](tutorial_images/PatternCenter.PNG)
+![PatternCenter.png](tutorial_images/PatternCenter.png)
 
 ## Scan Geometry
 
   1. Specify the scan and pixel width/height (or verify values loaded from a scan file).
   2. Optionally select a region of interest using the *Select ROI...* button. The image used for selection is determined by the drop down menu.
 
-![roi.png](tutorial_images/roi.PNG)
+![roi.png](tutorial_images/roi.png)
 
 ## Indexing Parameters
 
@@ -69,7 +69,7 @@ Patterns to be indexed are shown in the top half with available patterns in the 
     * IPF Map - {0,0,1} reference direction (optional)
     * CI Map - cross correlation map (optional)
  
-![IndexParams.png](tutorial_images/IndexParams.PNG)
+![IndexParams.png](tutorial_images/IndexParams.png)
 
 ## Summary Panel
 
@@ -80,14 +80,14 @@ Patterns to be indexed are shown in the top half with available patterns in the 
     * Export Namelist - generate a namelist file to use with the command line program
     * Cancel - return to summary panel
 
-![SummaryPanel.png](tutorial_images/SummaryPanel.PNG)
+![SummaryPanel.png](tutorial_images/SummaryPanel.png)
 
 
 # Indexing View
 
 * Parameters can be edited while not indexing (but are not validated)
 
-![IndexingView](tutorial_images/IndexingView.PNG)
+![IndexingView](tutorial_images/IndexingView.png)
 
 # Example Data
 
