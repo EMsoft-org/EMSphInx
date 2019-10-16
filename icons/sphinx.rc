@@ -1,0 +1,4 @@
+#include <wx/msw/wx.rc>
+sphinx          ICON "sphinx.ico"
+ApplicationIcon ICON "sphinx.ico"
+ICONPRG         ICON "sphinx.ico"

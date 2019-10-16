@@ -1,0 +1,7 @@
+[Desktop Entry]
+Encoding=UTF-8
+Name=EMSphInx
+Exec=~/emsphinx_build/EbsdWizard
+Icon=~/emsphinx/icons/sphinx.png
+Terminal=false
+Type=Application
