@@ -217,7 +217,7 @@ int main(int argc, char *argv[]) {
 			dSet.write((void*) buff.data(), dType, buffSpace, dSpace);//copy the pattern out
 		}
 	} else {//binning
-		std::vector<float> binBuf(dims[1] * dims[2]);//this is big enough for either case
+		std::vector<float> binBuf((size_t)dims[1] * (size_t)dims[2]);//this is big enough for either case
 
 		if(binToFloat) {
 			switch(pats->pixelType()) {
@@ -225,7 +225,7 @@ int main(int argc, char *argv[]) {
 					for(size_t i = 0; i < pats->numPat(); i++) {
 						start[0] = pats->extract(buff.data(), 1)[0];//read the next pattern and get index (shouldn't be empty since we're only extracting with one thread)
 						if(flip) flipPat(buff.data(), pats->width(), pats->height(), pats->pixBytes());
-						binFloat((uint8_t*) buff.data(), binBuf.data(), binning, dims[2], dims[1]);
+						binFloat((uint8_t*) buff.data(), binBuf.data(), binning, (size_t)dims[2], (size_t)dims[1]);
 						dSpace.selectHyperslab(H5S_SELECT_SET, count, start);//tell hdf5 where to write
 						dSet.write((void*) binBuf.data(), H5::PredType::NATIVE_FLOAT, buffSpace, dSpace);//copy the pattern out
 					}
@@ -235,7 +235,7 @@ int main(int argc, char *argv[]) {
 					for(size_t i = 0; i < pats->numPat(); i++) {
 						start[0] = pats->extract(buff.data(), 1)[0];//read the next pattern and get index (shouldn't be empty since we're only extracting with one thread)
 						if(flip) flipPat(buff.data(), pats->width(), pats->height(), pats->pixBytes());
-						binFloat((uint16_t*) buff.data(), binBuf.data(), binning, dims[2], dims[1]);
+						binFloat((uint16_t*) buff.data(), binBuf.data(), binning, (size_t)dims[2], (size_t)dims[1]);
 						dSpace.selectHyperslab(H5S_SELECT_SET, count, start);//tell hdf5 where to write
 						dSet.write((void*) binBuf.data(), H5::PredType::NATIVE_FLOAT, buffSpace, dSpace);//copy the pattern out
 					}
@@ -245,7 +245,7 @@ int main(int argc, char *argv[]) {
 					for(size_t i = 0; i < pats->numPat(); i++) {
 						start[0] = pats->extract(buff.data(), 1)[0];//read the next pattern and get index (shouldn't be empty since we're only extracting with one thread)
 						if(flip) flipPat(buff.data(), pats->width(), pats->height(), pats->pixBytes());
-						binFloat((float*) buff.data(), binBuf.data(), binning, dims[2], dims[1]);
+						binFloat((float*) buff.data(), binBuf.data(), binning, (size_t)dims[2], (size_t)dims[1]);
 						dSpace.selectHyperslab(H5S_SELECT_SET, count, start);//tell hdf5 where to write
 						dSet.write((void*) binBuf.data(), H5::PredType::NATIVE_FLOAT, buffSpace, dSpace);//copy the pattern out
 					}
@@ -260,7 +260,7 @@ int main(int argc, char *argv[]) {
 					for(size_t i = 0; i < pats->numPat(); i++) {
 						start[0] = pats->extract(buff.data(), 1)[0];//read the next pattern and get index (shouldn't be empty since we're only extracting with one thread)
 						if(flip) flipPat(buff.data(), pats->width(), pats->height(), pats->pixBytes());
-						binAvg((uint8_t *) buff.data(), (uint8_t *)binBuf.data(), binning, dims[2], dims[1]);
+						binAvg((uint8_t *) buff.data(), (uint8_t *)binBuf.data(), binning, (size_t)dims[2], (size_t)dims[1]);
 						dSpace.selectHyperslab(H5S_SELECT_SET, count, start);//tell hdf5 where to write
 						dSet.write((void*) binBuf.data(), dType, buffSpace, dSpace);//copy the pattern out
 					}
@@ -270,7 +270,7 @@ int main(int argc, char *argv[]) {
 					for(size_t i = 0; i < pats->numPat(); i++) {
 						start[0] = pats->extract(buff.data(), 1)[0];//read the next pattern and get index (shouldn't be empty since we're only extracting with one thread)
 						if(flip) flipPat(buff.data(), pats->width(), pats->height(), pats->pixBytes());
-						binAvg((uint16_t*) buff.data(), (uint16_t*)binBuf.data(), binning, dims[2], dims[1]);
+						binAvg((uint16_t*) buff.data(), (uint16_t*)binBuf.data(), binning, (size_t)dims[2], (size_t)dims[1]);
 						dSpace.selectHyperslab(H5S_SELECT_SET, count, start);//tell hdf5 where to write
 						dSet.write((void*) binBuf.data(), dType, buffSpace, dSpace);//copy the pattern out
 					}
@@ -280,7 +280,7 @@ int main(int argc, char *argv[]) {
 					for(size_t i = 0; i < pats->numPat(); i++) {
 						start[0] = pats->extract(buff.data(), 1)[0];//read the next pattern and get index (shouldn't be empty since we're only extracting with one thread)
 						if(flip) flipPat(buff.data(), pats->width(), pats->height(), pats->pixBytes());
-						binAvg((float   *) buff.data(), (float   *)binBuf.data(), binning, dims[2], dims[1]);
+						binAvg((float   *) buff.data(), (float   *)binBuf.data(), binning, (size_t)dims[2], (size_t)dims[1]);
 						dSpace.selectHyperslab(H5S_SELECT_SET, count, start);//tell hdf5 where to write
 						dSet.write((void*) binBuf.data(), dType, buffSpace, dSpace);//copy the pattern out
 					}

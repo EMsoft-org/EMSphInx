@@ -406,21 +406,21 @@ namespace emsphinx {
 			os << "testing wigner d tables\n";
 
 			//allocate lookup table space one
-			std::vector<Real> table(bw * bw * bw * 2);
+			std::vector<Real> table(size_t(bw * bw * bw * 2));
 
 			//select a random angle that isn't a special point w.r.t. symmetry
 			const Real beta = static_cast<Real>(0.9708055194);//pi / 2 / golden ratio
 			const Real t = std::cos(beta);
 
 			//test dTable(const size_t bw, const Real t, const bool nB, Real * const table) for nB = false
-			dTable(bw, t, false, table.data());
+			dTable((size_t)bw, t, false, table.data());
 			for(int64_t k = 0; k < bw; k++) {
 				for(int64_t m = 0; m < bw; m++) {
 					for(int64_t j = 0; j < bw; j++) {
 						const Real  dP = d(j, k, m,  t, false);//function evaluation
 						const Real  dN = d(j, k, m, -t, false);//function evaluation
-						const Real& tP = table[(k * bw * bw + m * bw + j)*2 + 0];//table value
-						const Real& tN = table[(k * bw * bw + m * bw + j)*2 + 1];//table value
+						const Real& tP = table[size_t(k * bw * bw + m * bw + j)*2 + 0];//table value
+						const Real& tN = table[size_t(k * bw * bw + m * bw + j)*2 + 1];//table value
 						const Real pMatch = dP == tP || std::isnan(dP);
 						const Real nMatch = dN == tN || std::isnan(dN);
 						if(!pMatch || !nMatch) {
@@ -437,14 +437,14 @@ namespace emsphinx {
 			}
 
 			//test dTable(const size_t bw, const Real t, const bool nB, Real * const table) for nB = true
-			dTable(bw, t, true , table.data());
+			dTable((size_t)bw, t, true , table.data());
 			for(int64_t k = 0; k < bw; k++) {
 				for(int64_t m = 0; m < bw; m++) {
 					for(int64_t j = 0; j < bw; j++) {
 						const Real  dP = d(j, k, m,  t, true );//function evaluation
 						const Real  dN = d(j, k, m, -t, true );//function evaluation
-						const Real& tP = table[(k * bw * bw + m * bw + j)*2 + 0];//table value
-						const Real& tN = table[(k * bw * bw + m * bw + j)*2 + 1];//table value
+						const Real& tP = table[size_t(k * bw * bw + m * bw + j)*2 + 0];//table value
+						const Real& tN = table[size_t(k * bw * bw + m * bw + j)*2 + 1];//table value
 						const Real pMatch = dP == tP || std::isnan(dP);
 						const Real nMatch = dN == tN || std::isnan(dN);
 						if(!pMatch || !nMatch) {
@@ -461,18 +461,18 @@ namespace emsphinx {
 			}
 
 			//build prefactors for dTablePre
-			std::vector<Real> pE(bw * bw * bw), pW(bw * bw * bw), pB(bw * bw * bw);
-			dTablePreBuild(bw, pE.data(), pW.data(), pB.data());
+			std::vector<Real> pE(size_t(bw * bw * bw)), pW(size_t(bw * bw * bw)), pB(size_t(bw * bw * bw));
+			dTablePreBuild((size_t)bw, pE.data(), pW.data(), pB.data());
 
 			//test dTablePre(const size_t jMax, const Real t, const bool nB, Real * const table, Real const * const pE, Real const * const pW, Real const * const pB) for nB = false
-			dTablePre(bw, t, false, table.data(), pE.data(), pW.data(), pB.data());
+			dTablePre((size_t)bw, t, false, table.data(), pE.data(), pW.data(), pB.data());
 			for(int64_t k = 0; k < bw; k++) {
 				for(int64_t m = 0; m < bw; m++) {
 					for(int64_t j = 0; j < bw; j++) {
 						const Real  dP = d(j, k, m,  t, false);//function evaluation
 						const Real  dN = d(j, k, m, -t, false);//function evaluation
-						const Real& tP = table[(k * bw * bw + m * bw + j)*2 + 0];//table value
-						const Real& tN = table[(k * bw * bw + m * bw + j)*2 + 1];//table value
+						const Real& tP = table[size_t(k * bw * bw + m * bw + j)*2 + 0];//table value
+						const Real& tN = table[size_t(k * bw * bw + m * bw + j)*2 + 1];//table value
 						const Real pMatch = dP == tP || std::isnan(dP);
 						const Real nMatch = dN == tN || std::isnan(dN);
 						if(!pMatch || !nMatch) {
@@ -489,14 +489,14 @@ namespace emsphinx {
 			}
 
 			//test dTablePre(const size_t jMax, const Real t, const bool nB, Real * const table, Real const * const pE, Real const * const pW, Real const * const pB) for nB = true
-			dTablePre(bw, t, true , table.data(), pE.data(), pW.data(), pB.data());
+			dTablePre((size_t)bw, t, true , table.data(), pE.data(), pW.data(), pB.data());
 			for(int64_t k = 0; k < bw; k++) {
 				for(int64_t m = 0; m < bw; m++) {
 					for(int64_t j = 0; j < bw; j++) {
 						const Real  dP = d(j, k, m,  t, true );//function evaluation
 						const Real  dN = d(j, k, m, -t, true );//function evaluation
-						const Real& tP = table[(k * bw * bw + m * bw + j)*2 + 0];//table value
-						const Real& tN = table[(k * bw * bw + m * bw + j)*2 + 1];//table value
+						const Real& tP = table[size_t(k * bw * bw + m * bw + j)*2 + 0];//table value
+						const Real& tN = table[size_t(k * bw * bw + m * bw + j)*2 + 1];//table value
 						const Real pMatch = dP == tP || std::isnan(dP);
 						const Real nMatch = dN == tN || std::isnan(dN);
 						if(!pMatch || !nMatch) {
@@ -513,12 +513,12 @@ namespace emsphinx {
 			}
 
 			//test dTable(const size_t jMax, Real * const table, const bool trans = false); for trans = false
-			dTable(bw, table.data(), false);
+			dTable((size_t)bw, table.data(), false);
 			for(int64_t k = 0; k < bw; k++) {
 				for(int64_t m = 0; m < bw; m++) {
 					for(int64_t j = 0; j < bw; j++) {
 						const Real  dV = d<Real>(j, k, m);//function evaluation
-						const Real& tV = table[k * bw * bw + m * bw + j];//table value
+						const Real& tV = table[size_t(k * bw * bw + m * bw + j)];//table value
 						if(dV != tV && !std::isnan(dV)) {
 							os << "table mismatch for `dTable(const size_t jMax, Real * const table, const bool trans = false)'\n";
 							os << "with (j,k,m) == (" << j << ',' << k << ',' << m << ") and trans == false\n";
@@ -532,12 +532,12 @@ namespace emsphinx {
 			}
 
 			//test dTable(const size_t jMax, Real * const table, const bool trans = false); for trans = true
-			dTable(bw, table.data(), true );
+			dTable((size_t)bw, table.data(), true );
 			for(int64_t k = 0; k < bw; k++) {
 				for(int64_t m = 0; m < bw; m++) {
 					for(int64_t j = 0; j < bw; j++) {
 						const Real  dV = d<Real>(j, k, m);//function evaluation
-						const Real& tV = table[m * bw * bw + k * bw + j];//table value
+						const Real& tV = table[size_t(m * bw * bw + k * bw + j)];//table value
 						if(dV != tV && !std::isnan(dV)) {
 							os << "table mismatch for `dTable(const size_t jMax, Real * const table, const bool trans = false)'\n";
 							os << "with (j,k,m) == (" << j << ',' << k << ',' << m << ") and trans == false\n";

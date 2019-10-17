@@ -567,7 +567,7 @@ namespace xtal {
 
 			//loop over a grid of all unit directions doing some tests
 			std::vector<Real> lin(501);
-			for(int i = 0; i < lin.size(); i++) lin[i] = Real(i) / (lin.size() - 1);// [0,1]
+			for(size_t i = 0; i < lin.size(); i++) lin[i] = Real(i) / (lin.size() - 1);// [0,1]
 			size_t fsCount = 0;
 			for(Real& x : lin) {
 				for(Real& y : lin) {
@@ -794,7 +794,7 @@ namespace xtal {
 
 		//grid the side length of the cubochoric cube
 		std::vector<Real> lin(151);//this needs to be pretty fine for FZ fraction to work out
-		for(int i = 0; i < lin.size(); i++) {
+		for(size_t i = 0; i < lin.size(); i++) {
 			lin[i] = Real(i) / (lin.size() - 1) - Real(0.5);// [-0.5,0.5]
 			lin[i] *= Constants<Real>::cuA;//grid a side of the cubochoric cube
 		}

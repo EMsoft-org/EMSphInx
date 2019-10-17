@@ -154,7 +154,16 @@ namespace xtal {
 		}
 
 		//check multiplication
-		quat::mul(qu, qr, qv);
+		if(1 == emsphinx::pijk) {//since pijk isn't in definition of qu / qr
+			quat::conj(qu, qu);//account for original test definition w/ pijk == -1
+			quat::conj(qr, qr);//account for original test definition w/ pijk == -1
+			quat::mul (qu, qr, qv);
+			quat::conj(qu, qu);//undo conjugation
+			quat::conj(qr, qr);//undo conjugation
+			quat::conj(qv, qv);//account for original test definition w/ pijk == -1
+		} else {
+			quat::mul(qu, qr, qv);
+		}
 		if(Real(70) != qv[0] || Real(8) != qv[1] || Real(0) != qv[2] || Real(16) != qv[3]) {
 			os << "quat::mul failed\n";
 			return false;

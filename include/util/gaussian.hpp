@@ -305,11 +305,11 @@ namespace gaussian {
 		c = std::max(gx.c, gy.c);//this works essentially just as well but is much faster
 
 		//compute x exponential once per column
-		for(int i = 0; i < m_w; i++) {
+		for(size_t i = 0; i < m_w; i++) {
 			const Real dx = gx.a - i;
 			cWrk[i] = std::exp( -(dx * dx / gx.b) ) * c;
 		}
-		for(int j = 0; j < m_h; j++) {
+		for(size_t j = 0; j < m_h; j++) {
 			const Real dy = gy.a - j;
 			rWrk[j] = std::exp( -(dy * dy / gy.b) );
 		}
@@ -320,8 +320,8 @@ namespace gaussian {
 	template <typename Real>
 	void BckgSub2D<Real>::subtract(float * const im) {
 		if(std::is_floating_point<Real>::value) {
-			for(int j = 0; j < m_h; j++) {
-				for(int i = 0; i < m_w; i++) {
+			for(size_t j = 0; j < m_h; j++) {
+				for(size_t i = 0; i < m_w; i++) {
 					const size_t idx = j*m_w+i;
 					im[idx] = (1 == msk->operator[](idx)) ? im[idx] - float(rWrk[j] * cWrk[i]) : 0.0;
 				}
@@ -335,8 +335,8 @@ namespace gaussian {
 	void BckgSub2D<Real>::subtract(uint8_t * const im) {
 		const Real offset = c / 2;
 		const uint8_t nVal = (uint8_t) (offset + Real(0.5));
-		for(int j = 0; j < m_h; j++) {
-			for(int i = 0; i < m_w; i++) {
+		for(size_t j = 0; j < m_h; j++) {
+			for(size_t i = 0; i < m_w; i++) {
 				const size_t idx = j*m_w+i;
 				if(1 == msk->operator[](idx)) {
 					const int vNew = int(im[idx]) - (int)std::round(rWrk[j] * cWrk[i] - offset);//compute background
@@ -356,8 +356,8 @@ namespace gaussian {
 	void BckgSub2D<Real>::subtract(uint16_t * const im) {
 		const Real offset = c / 2;
 		const uint16_t nVal = (uint16_t) (offset + Real(0.5));
-		for(int j = 0; j < m_h; j++) {
-			for(int i = 0; i < m_w; i++) {
+		for(size_t j = 0; j < m_h; j++) {
+			for(size_t i = 0; i < m_w; i++) {
 				const size_t idx = j*m_w+i;
 				if(1 == msk->operator[](idx)) {
 					const int vNew = int(im[idx]) - (int)std::round(rWrk[j] * cWrk[i] - offset);//compute background
@@ -377,8 +377,8 @@ namespace gaussian {
 	template <typename Real>
 	template <typename TPix>
 	void BckgSub2D<Real>::subtract(TPix const * const im, Real * const bf) {
-		for(int j = 0; j < m_h; j++) {
-			for(int i = 0; i < m_w; i++) {
+		for(size_t j = 0; j < m_h; j++) {
+			for(size_t i = 0; i < m_w; i++) {
 				const size_t idx = j*m_w+i;
 				bf[idx] = (1 == msk->operator[](idx)) ? Real(im[idx]) - rWrk[j] * cWrk[i] : Real(0);
 			}

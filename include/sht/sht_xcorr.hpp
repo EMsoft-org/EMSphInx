@@ -919,14 +919,15 @@ namespace emsphinx {
 			const bool gMir = false;//true/false if (gln[n*bw+j] == 0 if (n+j) % 2 != 0)
 			const bool  mirror = fMir || gMir;//is there at least 1 mirror
 			const bool bMirror = fMir && gMir;//do both functions have a mirror
-			const size_t dJ = fMir ? 2 : 1;
+			const int  dJ = fMir ? 2 : 1;
 
 			////////////////////////////////////////
 			//        loop over one order         //
 			////////////////////////////////////////
 			Real uA[3] = {0, sA * 2, 1};//recursion coefficients for chebyshev polynomial U_n(sin(alpha))
 			Real tA[3] = {0, cA    , 1};//recursion coefficients for chebyshev polynomial T_n(cos(alpha))
-			for(int m = 0; m < mBW; m++) {
+			const int iBW = (int)mBW;//cast to integer once to silence signed/unsigned comparsion warnings
+			for(int m = 0; m < iBW; m++) {
 				////////////////////////////////////////
 				// efficiently compute exp(I m alpha) //
 				////////////////////////////////////////
@@ -957,7 +958,7 @@ namespace emsphinx {
 				Real uG[3] = {0, sG * 2, 1};//recursion coefficients for chebyshev polynomial U_n(sin(gamma))
 				Real tG[3] = {0, cG    , 1};//recursion coefficients for chebyshev polynomial T_n(cos(gamma))
 
-				for(int n = 0; n < mBW; n++) {
+				for(int n = 0; n < iBW; n++) {
 					////////////////////////////////////////
 					// efficiently compute exp(I n gamma) //
 					////////////////////////////////////////
@@ -999,7 +1000,7 @@ namespace emsphinx {
 					agN *= sign * sn;
 
 					//get loop start
-					size_t start = std::max<size_t>(m, n);
+					int start = std::max<int>(m, n);
 					if(fMir && (start + m) % 2 != 0) ++start;//if fm[start] == 0 skip to next value (first value is zero)
 					if(gMir && (start + n) % 2 != 0) ++start;//if gn[start] == 0 skip to next value (first value is zero) [for double mirrors no change here since parities match]
 					
@@ -1021,7 +1022,7 @@ namespace emsphinx {
 						////////////////////////////////////////
 						//   loop over degrees accumulating   //
 						////////////////////////////////////////
-						for(size_t j = start; j < mBW; j+=dJ) {//increment by 1 for no mirror planes 2 if any are present
+						for(int j = start; j < iBW; j+=dJ) {//increment by 1 for no mirror planes 2 if any are present
 							//get wigner d^j_{m,+/-n} components
 							const Real d0P    =                dBeta[((m  ) * mBW * mBW + n * mBW + j) * 2 + 0];//d^j_{m  ,n}(     beta)
 							const Real d0N    =                dBeta[((m  ) * mBW * mBW + n * mBW + j) * 2 + 1];//d^j_{m  ,n}(pi - beta)
@@ -1031,8 +1032,9 @@ namespace emsphinx {
 							const Real d0N_2  = m+1 >= j ? 0 : dBeta[((m+2) * mBW * mBW + n * mBW + j) * 2 + 1];//d^j_{m+2,n}(pi - beta)
 
 							//compute derivatives of d^j_{m,+/-n}(beta)
-							const Real rjm      = std::sqrt( Real( (j - m    ) * (j + m + 1) ) );
-							const Real coef2_2  = std::sqrt( Real( (j - m - 1) * (j + m + 2) ) ) * rjm;
+							const int  jm       = j - m;
+							const Real rjm      =               std::sqrt( Real( (jm    ) * (j + m + 1) ) );
+							const Real coef2_2  = 0 == jm ? 0 : std::sqrt( Real( (jm - 1) * (j + m + 2) ) ) * rjm;
 							const Real d1P = d0P * coef1_0PP - d0P_1 * rjm                              ;//first  derivative of d^j_{+m,+n}(beta) w.r.t. beta
 							const Real d1N = d0N * coef1_0PN + d0N_1 * rjm                              ;//first  derivative of d^j_{+m,-n}(beta) w.r.t. beta
 							const Real d2P = d0P * coef2_0PP - d0P_1 * rjm * coef2_1PP + d0P_2 * coef2_2;//second derivative of d^j_{+m,+n}(beta) w.r.t. beta
@@ -1076,7 +1078,7 @@ namespace emsphinx {
 							}
 						}
 					} else {//we only need cross correlation
-						for(size_t j = start; j < mBW; j+=dJ) {//increment by 1 for no mirror planes 2 if any are present
+						for(int j = start; j < iBW; j+=dJ) {//increment by 1 for no mirror planes 2 if any are present
 							//get wigner d^j_{m,+/-n} components
 							const Real& d0P = dBeta[((m  ) * mBW * mBW + n * mBW + j) * 2 + 0];//d^j_{m  ,n}(     beta)
 							const Real& d0N = dBeta[((m  ) * mBW * mBW + n * mBW + j) * 2 + 1];//d^j_{m  ,n}(pi - beta)

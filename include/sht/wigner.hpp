@@ -710,7 +710,7 @@ namespace emsphinx {
 
 			//recursively compute wigner d function values for all d^j_{k,m} where k >= m >= 0
 			//use symmetry to fill in table for m < 0 and m > k: /d^j_{ m, k} = (-1)^(  k- m) d^j_{k,m}
-			for(int k = 0; k < jMax; k++) {
+			for(int k = 0; k < (int)jMax; k++) {
 				for(int m = 0; m <= k; m++) {
 					const bool km = (k-m) % 2 == 0;
 
@@ -743,7 +743,7 @@ namespace emsphinx {
 					Real djkm;           //d^{j  }_{k,m}
 					Real d_j1km = d_k1km;//d^{j-1}_{k,m}
 					Real d_j2km = d_kkm ;//d^{j-2}_{k,m}
-					for(int j = k + 2; j < jMax; j++) {
+					for(int j = k + 2; j < (int)jMax; j++) {
 						djkm = a_jkm_1<Real>(j, k, m) * d_j1km - b_jkm<Real>(j, k, m) * d_j2km;//d^{j}_{k,m}
 						const Real djak = km             ? djkm : -djkm;//d^{j}_{m,k}
 						if(trans) {
