@@ -43,17 +43,37 @@ namespace ebsd {
 	//a subset of the complete geometry  (we're lucky if the vendors give us this much)
 	template <typename Real = float>
 	struct Calibration {
+		//@brief: enumeration of normalized pattern center types
+		enum class Vendor {
+			Bruker,
+			EDAX  ,
+			Oxford,
+		};
+
+		//experimental conditions
 		Real sTlt ;//sample tilt in degrees
 		Real cTlt ;//camera tilt in degrees
 		Real wd   ;//sample working distance in mm
 		Real kv   ;//accelerating voltage in kV
-		Real xStar;//tsl style pattern center x (in fractional detector widths  from center)
-		Real yStar;//tsl style pattern center y (in fractional detector heights from center)
-		Real zStar;//tsl style pattern center z (in fractional detector widths  from interaction point)
+
+		//pattern center
+		//@note: xStar is the same for TSL, Oxford and Bruker
+		//       Oxford yStar is is yStar(TSL) * detector width / detector height
+		//       Bruker yStar is 1 - yStar(Oxford)
+		//       zStar is the same for TSL and Oxford, Bruker zStar is zStar(TSL) * detector height / detector width
+		Vendor ven;//pattern center vendor
+		Real ratio;//detector aspect ratio (width / height)
+		Real xStar;//normalized pattern center x
+		Real yStar;//normalized pattern center y
+		Real zStar;//normalized pattern center z
 
 		//@brief: construct an uninitialized calibration
 		Calibration() : sTlt(NAN), cTlt(NAN), wd(NAN), kv(NAN), xStar(NAN), yStar(NAN), zStar(NAN) {}
 
+		//@brief  : convert from current vendor to new vendor
+		//@param v: new vendor
+		//@note   : correctly updates pattern center using aspect ratio
+		void setVendor(const Vendor v);
 	};
 }
 
@@ -147,6 +167,39 @@ namespace xtal {
 #include "rotations.hpp"
 #include "constants.hpp"
 
+namespace ebsd {
+
+	//@brief  : convert from current vendor to new vendor
+	//@param v: new vendor
+	//@note   : correctly updates pattern center using aspect ratio
+	template <typename Real>
+	void Calibration<Real>::setVendor(const Calibration<Real>::Vendor v) {
+		if(v == ven) return;//already correct
+		//update y/z star (x stars are all the same)
+		if       (Vendor::Bruker == ven && Vendor::EDAX   == v) {// Bruker --> EDAX
+			yStar = (Real(1) - yStar ) / ratio;
+			zStar = zStar / ratio;
+		} else if(Vendor::Bruker == ven && Vendor::Oxford == v) {// Bruker --> Oxford
+			yStar = Real(1) - yStar;
+			zStar = zStar / ratio;
+		} else if(Vendor::EDAX   == ven && Vendor::Oxford == v) {// EDAX   --> Oxford
+			yStar = yStar * ratio;
+			//TSL and Oxford zStars are the same
+		} else if(Vendor::EDAX   == ven && Vendor::Bruker == v) {// EDAX   --> Bruker
+			yStar = Real(1) - yStar * ratio;
+			zStar = zStar * ratio;
+		} else if(Vendor::Oxford == ven && Vendor::Bruker == v) {// Oxford --> Bruker
+			yStar = Real(1) - yStar;
+			zStar = zStar * ratio;
+		} else if(Vendor::Oxford == ven && Vendor::EDAX   == v) {// Oxford --> EDAX
+			yStar = yStar / ratio;
+			//TSL and Oxford zStars are the same
+		}
+		ven = v;//save new vendor
+	}
+
+}
+
 namespace xtal {
 	namespace detail {
 		//@brief         : check if a file name is a hdf5 type
@@ -198,6 +251,7 @@ namespace xtal {
 		calib.sTlt  = om.sampTlt        ;
 		calib.cTlt  = om.camTlt         ;
 		calib.wd    = om.workingDistance;
+		calib.ven   = ebsd::Calibration<Real>::Vendor::EDAX;
 		calib.xStar = om.xStar          ;
 		calib.yStar = om.yStar          ;
 		calib.zStar = om.zStar          ;
@@ -246,13 +300,15 @@ namespace xtal {
 		om.gridType = tsl::GridType::Square;
 
 		//copy camera calibration
+		ebsd::Calibration<Real> c = calib;
+		c.setVendor(ebsd::Calibration<Real>::Vendor::EDAX);
 
-		om.sampTlt         = (float) calib.sTlt ;
-		om.camTlt          = (float) calib.cTlt ;
-		om.xStar           = (float) calib.xStar;
-		om.yStar           = (float) calib.yStar;
-		om.zStar           = (float) calib.zStar;
-		om.workingDistance = (float) calib.wd   ;
+		om.sampTlt         = (float) c.sTlt ;
+		om.camTlt          = (float) c.cTlt ;
+		om.xStar           = (float) c.xStar;
+		om.yStar           = (float) c.yStar;
+		om.zStar           = (float) c.zStar;
+		om.workingDistance = (float) c.wd   ;
 
 		//copy header info
 		om.xStep        = (float) xStep ;
@@ -314,6 +370,7 @@ namespace xtal {
 		yStep      = om.yStep  ;
 		calib.sTlt = om.angle  ;
 		calib.kv   = om.kv     ;
+		calib.ven  = ebsd::Calibration<Real>::Vendor::Oxford;
 		owner      = om.author ;
 		name       = om.project;
 

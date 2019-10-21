@@ -96,10 +96,10 @@ namespace tsl {
 
 		//@brief: construct an empty orientation map
 		OrientationMap() : pixPerUm(1), 
-			xStar(NaN), yStar(NaN), zStar(NaN),
-			sampTlt(NaN), camTlt(NaN),
-			workingDistance(NaN),
-			xStep(NaN), yStep(NaN),
+			xStar(NAN), yStar(NAN), zStar(NAN),
+			sampTlt(NAN), camTlt(NAN),
+			workingDistance(NAN),
+			xStep(NAN), yStep(NAN),
 			gridType(GridType::Unknown) {}
 
 		//@brief         : construct an orientation map from a file
