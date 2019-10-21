@@ -611,7 +611,7 @@ namespace tsl {
 
 		//loop over phases
 		H5::Group pGrp = header.openGroup("Phase");
-		const size_t numPhase = pGrp.getNumObjs();
+		const size_t numPhase = (size_t)pGrp.getNumObjs();
 		if(0 == numPhase) throw std::runtime_error("no phases in tsl HDF file");
 		phaseList.resize(numPhase);
 		for(size_t i = 0; i < numPhase; i++) {
@@ -773,9 +773,9 @@ namespace tsl {
 			}
 		}
 
-		for(size_t j = 0; j < nRows; j++) {
-			for(size_t i = 0; i < nColsOdd; i++) {
-				const size_t idx = j * nRows + i;
+		for(int32_t j = 0; j < nRows; j++) {
+			for(int32_t i = 0; i < nColsOdd; i++) {
+				const int32_t idx = j * nRows + i;
 				os << std::setprecision(5);
 				os        << std::setw( 9) <<      eu   [3*i  ];
 				os << ' ' << std::setw( 9) <<      eu   [3*i+1];

@@ -10,7 +10,7 @@
 The *EMSphInx* code was developed with support from an ONR Vannevar Bush Faculty Fellowship grant, N00014-­16-­1-­2821. The central indexing algorithm is covered by a provisional patent application.
 
 ## Build Instructions
-Nightly builds will be available soon for a variety of operating systems
+Nightly builds will be available soon for a variety of operating systems. Binaries are also available as [assets for tagged releases](https://github.com/EMsoft-org/EMSphInx/releases).
 
 *EMSphInx* requires [CMake 3.14 or higher](https://www.cmake.org/download) to build. All dependencies are downloaded and compiled as part of the build process by default. The easiest way to build a non-default version of *EMSphInx* is with the cmake gui or ccmake. If you are restricted to the command line and only need the default configuration you can build with the following sequence:
 

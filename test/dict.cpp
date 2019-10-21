@@ -292,13 +292,13 @@ Dictionary::Dictionary(std::string fileName, const size_t maxPat) {
 	H5::DataSet eulers   = file.openDataSet("EMData/EBSD/EulerAngles");
 	H5::DataSet patterns = file.openDataSet("EMData/EBSD/EBSDPatterns");
 	patterns.getSpace().getSimpleExtentDims(dims);//read extent in each dimension
-	num = maxPat == 0 ? dims[0] : std::min<size_t>(dims[0], maxPat);
+	num = maxPat == 0 ? (size_t)dims[0] : std::min<size_t>((size_t)dims[0], maxPat);
 	const size_t nDims = patterns.getSpace().getSimpleExtentNdims();
 	const bool vectorized = nDims == 2;
 	if(!vectorized) {
 		if(nDims != 3) throw std::runtime_error("only 2d or 3d patterns are supported");
 	}
-	pix = vectorized ? dims[1] : dims[1] * dims[2];
+	pix = (size_t)(vectorized ? dims[1] : dims[1] * dims[2]);
 
 	//select hyperslabs to read only first num patterns/euler angles
 	hsize_t slabOffsets[3];// hyperslab offset in memory

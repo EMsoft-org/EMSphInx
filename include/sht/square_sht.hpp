@@ -454,7 +454,7 @@ namespace emsphinx {
 				Real const * amn = shtLut->amn.data();
 				Real const * bmn = shtLut->bmn.data();
 				std::complex<Real> * plm = alm;
-				for(int m = 0; m < mLim; m++) {
+				for(size_t m = 0; m < mLim; m++) {
 					//get weighted values from fft
 					const std::complex<Real>& gmyS = cWrk1[m];//for     symmetric modes
 					const std::complex<Real>& gmyA = cWrk2[m];//for antisymmetric modes
@@ -470,7 +470,7 @@ namespace emsphinx {
 					plm[m+1] += gmyA * pmn1;
 					
 					//now compute remaining P^m_n values
-					for(int n = m+2; n < maxL; n++) {//l is more commonly used but I'll stick with paper's notation
+					for(size_t n = m+2; n < maxL; n++) {//l is more commonly used but I'll stick with paper's notation
 						Real pmn = amn[n] * x * pmn1 - bmn[n] * pmn2;//P^m_n (Schaeffer equation 15)
 						pmn2 = pmn1;//push back pmn values in recursion
 						pmn1 = pmn; //push back pmn values in recursion
@@ -777,10 +777,10 @@ namespace emsphinx {
 				std::fill(x + 0, x + m1+1, Real(1));//fill upper bounds
 				if(1 == n%2) x[m1] = 0;//explicitly specify middle eigenvalue for odd case
 				//reference pseudocode: endi
-				for(int k = 0; k < m1; k++) {//loop over eigen values in reverse order calculating (largest -> smallest)
+				for(size_t k = 0; k < m1; k++) {//loop over eigen values in reverse order calculating (largest -> smallest)
 					//get initial lower bound on eigen value k
 					Real xu = 0;//start with lower bound on all eigen values
-					for(int i = k; i < m1; i++) {//loop over previously computed eigenvalues
+					for(size_t i = k; i < m1; i++) {//loop over previously computed eigenvalues
 						if(xu < wu[i]) {//check if previous eigenvalue had a better lower bound
 							xu = wu[i];//start from the better lower bound instead
 							break;//reference pseudocode: goto contin
@@ -1042,7 +1042,8 @@ namespace emsphinx {
 			}
 			//build column vector b and solve for weights (A * wgt = b)
 			std::vector<Real> b(nMat);
-			for(int i = 0; i < nMat; i++) b[i] = Real(-1) / (4 * i * i - 1);
+			b[0] = Real(1);
+			for(size_t i = 1; i < nMat; i++) b[i] = Real(-1) / (4 * i * i - 1);
 			solve::lu(a.data(), wgt, b.data(), nMat);//solve A * wgt = b
 
 			//compute the solid angle of a grid point

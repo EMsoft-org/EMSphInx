@@ -262,12 +262,12 @@ namespace emsphinx {
 		dims.resize(energy.getSpace().getSimpleExtentNdims());//allocate space for accum_e (should be 3)
 		energy.getSpace().getSimpleExtentDims(dims.data());//read extent in each dimension
 		if(3 != dims.size()) throw std::runtime_error("unexpected accum_e layout");
-		const size_t slicePts = dims[0] * dims[1];
-		std::vector<uint32_t> accumE(slicePts * dims[2]);//allocate space
+		const size_t slicePts = (size_t)(dims[0] * dims[1]);
+		std::vector<uint32_t> accumE(slicePts * (size_t)dims[2]);//allocate space
 		energy.read(accumE.data(), H5::PredType::NATIVE_UINT32);//read accum_e
 
 		//use results to determine energy averaging
-		std::vector<uint32_t> eCounts(dims[2], 0);
+		std::vector<uint32_t> eCounts((size_t)dims[2], 0);
 		for(size_t i = 0; i < slicePts; i++) std::transform(eCounts.cbegin(), eCounts.cend(), accumE.cbegin() + i * eCounts.size(), eCounts.begin(), std::plus<uint32_t>());
 		std::vector<Real> weights(eCounts.cbegin(), eCounts.cend());
 		const Real sum = std::accumulate(weights.cbegin(), weights.cend(), Real(0));
@@ -310,9 +310,9 @@ namespace emsphinx {
 		} else {
 			throw std::runtime_error("couldn't determine if master pattern was EBSD or ECP");
 		}
-		const size_t numAtoms = dims[0];
+		const size_t numAtoms = (size_t)dims[0];
 		// if(dims[0] != numAtoms) throw std::runtime_error("unexpected master pattern layout");//make sure number of patterns matches atom count
-		if(dims[1] != weights.size()) throw std::runtime_error("unexpected master pattern layout");//make sure energy bins matches MC output
+		if((size_t)dims[1] != weights.size()) throw std::runtime_error("unexpected master pattern layout");//make sure energy bins matches MC output
 
 		//save size / allocate data
 		dim = (uint16_t)dims[2];//extract master pattern side length
@@ -321,9 +321,9 @@ namespace emsphinx {
 		lyt = square::Layout::Lambert;
 
 		//now read entire master pattern
-		const size_t hemPts = dims[2] * dims[3];//points for one hemisphere
-		const size_t atmPts = dims[1] * hemPts ;//points for all energy bins of a single atom
-		std::vector<float> nhPat(dims[0] * atmPts), shPat(dims[0] * atmPts);//allocate space
+		const size_t hemPts = (size_t)(dims[2] * dims[3]);//points for one hemisphere
+		const size_t atmPts = (size_t)(dims[1] * hemPts );//points for all energy bins of a single atom
+		std::vector<float> nhPat((size_t)dims[0] * atmPts), shPat((size_t)dims[0] * atmPts);//allocate space
 		nhData.read(nhPat.data(), H5::PredType::NATIVE_FLOAT);//read north hemisphere
 		shData.read(shPat.data(), H5::PredType::NATIVE_FLOAT);//read south hemisphere
 
@@ -526,7 +526,7 @@ namespace emsphinx {
 	template <typename Real>
 	void MasterPattern<Real>::matchEquator() {
 		std::copy(nh. begin(), nh. begin() + dim, sh. begin());
-		for(size_t i = 1; i < dim-1; i++) {
+		for(size_t i = 1; i < (size_t)(dim-1); i++) {
 			sh[dim* i     ] = nh[dim* i     ];
 			sh[dim*(i+1)-1] = nh[dim*(i+1)-1];
 		}

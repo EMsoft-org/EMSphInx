@@ -314,8 +314,8 @@ namespace nml {
 			if(!gotComma) throw std::runtime_error("missing comma between previous entry and namelist line " + std::to_string(lineNum) + " \"" + line + "\"");
 			gotComma = false;//clear flag in case we reverse all the way through the line
 			iss.seekg(-1,std::ios::end);//move to end of line
-			const size_t len = iss.tellg();//get length
-			for(size_t i = 0; i <= len; i++) {//reverse loop over iss
+			const std::streamoff len = iss.tellg();//get length
+			for(std::streamoff i = 0; i <= len; i++) {//reverse loop over iss
 				if(std::isspace(iss.peek())) {//keep reversing through whitespace
 					iss.unget();
 				} else {//this is an actual characater

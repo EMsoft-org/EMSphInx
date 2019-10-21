@@ -155,8 +155,8 @@ void PatternPreviewPanel::updateImages(size_t idx, int circ, bool bckg, size_t n
 	if(m_idxCur != idx || first) {//the input image changed
 		//loop over image updating
 		char const * pBuff = m_images->operator[](idx).data();
-		for(size_t j = 0; j < sz.GetHeight(); j++) {
-			for(size_t i = 0; i < sz.GetWidth(); i++) {
+		for(int j = 0; j < sz.GetHeight(); j++) {
+			for(int i = 0; i < sz.GetWidth(); i++) {
 				m_panelRaw->SetGray(i, j, *pBuff);
 				++pBuff;
 			}
@@ -173,8 +173,8 @@ void PatternPreviewPanel::updateImages(size_t idx, int circ, bool bckg, size_t n
 
 		//update processed image
 		char const * pBuff = ahe.data();
-		for(size_t j = 0; j < sz.GetHeight(); j++) {
-			for(size_t i = 0; i < sz.GetWidth(); i++) {
+		for(int j = 0; j < sz.GetHeight(); j++) {
+			for(int i = 0; i < sz.GetWidth(); i++) {
 				m_panelPrc->SetGray(i, j, *pBuff);
 				++pBuff;
 			}

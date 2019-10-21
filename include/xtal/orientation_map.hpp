@@ -445,7 +445,7 @@ namespace xtal {
 
 				//read phases
 				hdr = hdr.openGroup("Phase");
-				const size_t numPhase = hdr.getNumObjs();
+				const size_t numPhase = (size_t)hdr.getNumObjs();
 				phsList.resize(numPhase);
 				for(size_t i = 0; i < numPhase; i++) {
 					std::stringstream ss;

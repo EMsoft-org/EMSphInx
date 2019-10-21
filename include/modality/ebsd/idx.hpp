@@ -194,8 +194,9 @@ namespace emsphinx {
 
 			//read patterns and sanity check number / size
 			pat = PatternFile::Read(nml.patFile, nml.patName, nml.patDims[0], nml.patDims[1]);
-			if(pat->numPat() < nml.scanDims[0] * nml.scanDims[1]) throw std::runtime_error("not enough patterns for scan");
-			else if(pat->numPat() > nml.scanDims[0] * nml.scanDims[1]) {
+			const size_t numScanPts = (size_t)nml.scanDims[0] * nml.scanDims[1];
+			if(pat->numPat() < numScanPts) throw std::runtime_error("not enough patterns for scan");
+			else if(pat->numPat() > numScanPts) {
 				// std::cout << "\n * * * * * * warning: " << pat->numPat() - nml.scanDims[0] * nml.scanDims[1] << " more pattern(s) than scan points * * * * * * \n\n";
 			}
 			if(pat->width() != nml.patDims[0] || pat->height() != nml.patDims[1]) throw std::runtime_error("detector/pattern size mismatch");

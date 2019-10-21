@@ -77,7 +77,12 @@ if(${EMSPHINX_BUILD_HDF5})
 	add_dependencies(sht2mp        hdf5)
 endif()
 if(${EMSPHINX_BUILD_GUIS})
-	add_dependencies(EMSphInxEBSD  hdf5 ${FFTW_DEPENDS})
+	if(${EMSPHINX_BUILD_FFTW})
+		add_dependencies(EMSphInxEBSD ${FFTW_DEPENDS})
+	endif()
+	if(${EMSPHINX_BUILD_HDF5})
+		add_dependencies(EMSphInxEBSD hdf5)
+	endif()
 endif()
 
 ################################

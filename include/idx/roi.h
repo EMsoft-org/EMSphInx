@@ -95,7 +95,7 @@ namespace emsphinx {
 
 			//@brief : check if there is a complete shape
 			//@return: true if there is a complete shape, false otherwise
-			const bool hasShape() const {return pts.empty() ? false : DrawMode::Polygon == mode ? (pts.front() == pts.back() && pts.size() > 2 && curPt + 1 < pts.size()) : true;}
+			const bool hasShape() const {return pts.empty() ? false : DrawMode::Polygon == mode ? (pts.front() == pts.back() && pts.size() > 2u && curPt + 1u < pts.size()) : true;}
 
 			//@brief   : translate
 			//@param dX: x shift

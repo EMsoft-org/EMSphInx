@@ -54,7 +54,7 @@ if(EMSPHINX_BUILD_HDF5)
 
 	# now set up hdf5 build
 	include(ExternalProject)
-	ExternalProject_add(hdf5 PREFIX hdf5 GIT_REPOSITORY ${HDF5_URL} GIT_TAG ${HDF5_VERS}
+	ExternalProject_add(hdf5 PREFIX hdf5 GIT_REPOSITORY ${HDF5_URL} GIT_TAG ${HDF5_VERS} GIT_SHALLOW TRUE
 		# UPDATE_DISCONNECTED 1 # this should keep the cmake from trying to repull from the repo every time make is run but doesn't...
 		UPDATE_COMMAND "" # this does keep cmake from redoing everythin on every make but means that if you change HDF5_VERS it won't automatically pull and build the new one
 		CMAKE_ARGS ${HDF5_OPTIONS} -DCMAKE_INSTALL_PREFIX=${HDF5_BUILD_DIR}/install
@@ -92,6 +92,7 @@ if(EMSPHINX_BUILD_HDF5)
 	endforeach()
 
 	if(UNIX AND NOT APPLE)
+        list(APPEND HDF5_LIBRARIES ${CMAKE_DL_LIBS}) # this isn't needed for (but doesn't disrupt) debian, is required for ubuntu
 		set(CMAKE_EXE_LINKER_FLAGS "${CMAKE_EXE_LINKER_FLAGS} -ldl")
 	endif()
 

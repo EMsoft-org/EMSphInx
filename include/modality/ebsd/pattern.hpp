@@ -202,7 +202,7 @@ namespace emsphinx {
 		//@brief: class to read patterns from an ifstream (this actually performs as well as a memory map on the linux systems tested)
 		class IfStreamedPatternFile : public StreamedPatternFile {
 			std::ifstream ifs ;//underlying file
-			const size_t  fByt;//size of underlying file in bytes
+			const int64_t fByt;//size of underlying file in bytes
 			//if this class is modified to include pre/post padding bytes it will be significantly more flexible (and can accommodate the oxford format)
 
 			public:
@@ -214,7 +214,7 @@ namespace emsphinx {
 				//@brief   : construct the pointer to the data start from an offset in bytes
 				//@param of: offset to data start in bytes
 				//@note    : sets number of patterns using file size and pattern size
-				void setOffset(const size_t of);
+				void setOffset(const int64_t of);
 		};
 
 		//@brief: oxford has enough peculiarities that I've written a separate class for now (it may be worth generalizing the streamed pattern file interface to make this unnecessary)
@@ -439,9 +439,9 @@ namespace emsphinx {
 					//we can try memory mapping the file
 					try {
 						std::shared_ptr<IfStreamedPatternFile> ptr = std::make_shared<IfStreamedPatternFile>(name);//memory map entire file
-						ptr->setShape(dims[2], dims[1], bits);
+						ptr->setShape((size_t)dims[2], (size_t)dims[1], bits);
 						ptr->setOffset(dSet.getOffset());
-						ptr->setNum(dims[0]);
+						ptr->setNum((size_t)dims[0]);
 						ptr->flp = vendorFlip;
 						return std::shared_ptr<PatternFile>(ptr);
 					} catch (...) {
@@ -452,8 +452,8 @@ namespace emsphinx {
 				//if we made it this far we either can't get raw access or failed to do so
 				//just read entire dataset into memory (it may be good to add a ChunkedPatternFile derived option for large files)
 				std::shared_ptr<BufferedPatternFile> ptr = std::make_shared<BufferedPatternFile>();
-				ptr->setShape(dims[2], dims[1], bits);
-				ptr->setNum(dims[0]);
+				ptr->setShape((size_t)dims[2], (size_t)dims[1], bits);
+				ptr->setNum((size_t)dims[0]);
 				ptr->allocate();
 				dSet.read((void*)ptr->data(), H5::PredType::NATIVE_UINT8);
 				ptr->flp = vendorFlip;
@@ -676,8 +676,8 @@ namespace emsphinx {
 		//@brief   : construct the pointer to the data start from an offset in bytes
 		//@param of: offset to data start in bytes
 		//@note    : sets number of patterns using file size and pattern size
-		void IfStreamedPatternFile::setOffset(const size_t of) {
-			num = (fByt - of) / imBytes();
+		void IfStreamedPatternFile::setOffset(const int64_t of) {
+			num = size_t( (fByt - of) / imBytes() );
 			ifs.seekg(of);
 			idx = 0;
 		}
@@ -700,7 +700,7 @@ namespace emsphinx {
 			   0xFF != header[6] ||
 			   0xFF != header[7]) throw std::runtime_error("unexpected header for " + name);//check header
 			if(!ifs.read((char*)&offset, sizeof(offset))) throw std::runtime_error("failed to read first pattern position from " + name);//read offset to first pattern
-			const uint64_t numPat = (offset - 8) / 8;//compute pattern count from offset to first pattern
+			const size_t numPat = size_t( (offset - 8) / 8 );//compute pattern count from offset to first pattern
 
 			//now read all the offsets at once
 			ifs.seekg(8);//go back to first index
@@ -742,7 +742,7 @@ namespace emsphinx {
 				uint64_t off = offsets[i] - offset;//convert from absolute offset to offset to from first pattern
 				if(0 != off % blockBytes) throw std::runtime_error("inconsistent block sizes aren't currently supported for .ebsp files");
 				off /= blockBytes;//we know of the offset of pattern i (in patterns)
-				idx[off] = i;//what we actually need to know is which pattern is at each position
+				idx[(size_t)off] = i;//what we actually need to know is which pattern is at each position
 			}
 
 			//make sure we got all the patterns

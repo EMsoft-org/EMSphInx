@@ -207,8 +207,8 @@ template <typename Real> class Mat {
 		//@return   : os
 		std::ostream& print(std::ostream& os, const bool sci = false) const {
 			os << (sci ? std::scientific : std::fixed) << std::setprecision(4);
-			for(int i = 0; i < _m; i++) {
-				for(int j = 0; j < _n; j++) {
+			for(size_t i = 0; i < _m; i++) {
+				for(size_t j = 0; j < _n; j++) {
 					os << std::setw(sci ? 13 : 10) << _a[i*_n+j];
 				}
 				os << '\n';
