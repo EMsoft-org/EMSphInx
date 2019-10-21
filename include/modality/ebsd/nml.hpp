@@ -39,6 +39,7 @@
 #include <string>
 
 #include "idx/roi.h"
+#include "util/nml.hpp"
 
 namespace emsphinx {
 
@@ -115,6 +116,11 @@ namespace emsphinx {
 			//@return   : warning string (list of unused namelist values)
 			std::string from_string(std::string nml);
 
+			//@brief    : parse indexing values from a namelist file
+			//@param nml: file to parse (namelist object)
+			//@return   : warning string (list of unused namelist values)
+			std::string parse_nml(nml::NameList& nml);
+
 			//@brief    : convert a namelist to a string
 			//@param nml: namelist name (for fortran)
 			//@return   : namelist file string
@@ -152,7 +158,6 @@ namespace emsphinx {
 
 #include <sstream>
 
-#include "util/nml.hpp"
 #include "modality/ebsd/pattern.hpp"
 #include "util/sysnames.hpp"
 #include "xtal/orientation_map.hpp"
@@ -214,28 +219,34 @@ namespace emsphinx {
 			namelistFile = nml;//save a copy of the file
 			std::istringstream iss(nml);
 			nml::NameList nameList;
-			nameList.read(iss);
+			nameList.read(iss); 
+			return parse_nml(nameList);
+		}
 
+		//@brief    : parse indexing values from a namelist file
+		//@param nml: file to parse (namelist object)
+		//@return   : warning string (list of unused namelist values)
+		std::string Namelist::parse_nml(nml::NameList& nml) {
 			//parse inputs first
-			try {     ipath       =         nameList.getString ("ipath"     );} catch (...) {ipath   .clear();}//if ipath isn't found we'll just use cwd
-			try {     pSymFile    =         nameList.getString ("psymfile"  );} catch (...) {pSymFile.clear();}//if pSymFile isn't found no operators will be checked
-			          masterFiles =         nameList.getStrings("masterfile");
-			          patFile     = ipath + nameList.getString("patfile"   );
+			try {     ipath       =         nml.getString ("ipath"     );} catch (...) {ipath   .clear();}//if ipath isn't found we'll just use cwd
+			try {     pSymFile    =         nml.getString ("psymfile"  );} catch (...) {pSymFile.clear();}//if pSymFile isn't found no operators will be checked
+			          masterFiles =         nml.getStrings("masterfile");
+			          patFile     = ipath + nml.getString("patfile"   );
 			const bool h5Pat = H5::H5File::isHdf5(patFile);
-			if(h5Pat) patName     =         nameList.getString("patdset"   );
+			if(h5Pat) patName     =         nml.getString("patdset"   );
 			if(!pSymFile.empty()) patFile = ipath + patFile;
 			for(std::string& str : masterFiles) str = ipath + str;
 
 			//parse scan dimensions (before pattern center since this will overwrite values)
 			try{
-				scanFile = ipath + nameList.getString("scandims");//try to get scan dims as a file name
+				scanFile = ipath + nml.getString("scandims");//try to get scan dims as a file name
 				const bool h5Scn = H5::H5File::isHdf5(patFile);
-				if(h5Scn) scanName = nameList.getString("scanname");
+				if(h5Scn) scanName = nml.getString("scanname");
 				if(!readScanFile()) throw std::runtime_error("failed to read scan dimensions from " + scanFile);
 				pctr[0] = pctr[1] = pctr[2] = thetac = NAN;
 			} catch (std::runtime_error&) {
 				//if we didn't get a file name check for scan dimensions
-				std::vector<double> dims = nameList.getDoubles("scandims");
+				std::vector<double> dims = nml.getDoubles("scandims");
 				if(3 != dims.size() && 4 != dims.size()) throw std::runtime_error("expected a filename or dimensions + resolution for 'scandims' in namelist");
 
 				//sanity check scan dimensions
@@ -245,24 +256,24 @@ namespace emsphinx {
 				scanSteps[0] = dims[2];
 				scanSteps[1] = dims.back();
 			}
-			roi.from_string(nameList.getString("roimask"));
+			roi.from_string(nml.getString("roimask"));
 
 			//parse pattern info
 			{
-				std::vector<int> dims = nameList.getInts("patdims");
+				std::vector<int> dims = nml.getInts("patdims");
 				if(2 != dims.size()) throw std::runtime_error("patdims must be 2 elements");
 				patDims[0] = dims[0]; patDims[1] = dims[1];
 			}
-			circRad  =          nameList.getInt ("circmask");
-			gausBckg =          nameList.getBool("gausbckg");
-			nRegions = (size_t) nameList.getInt ("nregions");//adaptive histogram grid resolution
+			circRad  =          nml.getInt ("circmask");
+			gausBckg =          nml.getBool("gausbckg");
+			nRegions = (size_t) nml.getInt ("nregions");//adaptive histogram grid resolution
 
 			//parse pattern center
-			delta  = nameList.getDouble("delta" );
-			thetac = nameList.getDouble("thetac");
-			ven    = nameList.getString ("vendor" );
+			delta  = nml.getDouble("delta" );
+			thetac = nml.getDouble("thetac");
+			ven    = nml.getString ("vendor" );
 			{
-				std::vector<double> ctr = nameList.getDoubles("pctr"   );
+				std::vector<double> ctr = nml.getDoubles("pctr"   );
 				if(3 != ctr.size()) throw std::runtime_error("pctr    must be 3 elements");
 				pctr[0] = ctr[0]; pctr[1] = ctr[1]; pctr[2] = ctr[2]; 
 			}
@@ -274,21 +285,21 @@ namespace emsphinx {
 			     "tsl"    == ven )) throw std::runtime_error("unknown vendor for pattern center `" + ven + "'");
 
 			//parse indexing parameters
-			bw        = (size_t) nameList.getInt ("bw"       );//what bandwidth should be used, if 2*bw-1 is product of small primes it is a good candidate for speed (fft is significant fraction of time): 32,38,41,53,63,68,74,88,95,113,123,158
-			normed    = (size_t) nameList.getBool("normed"   );//should normalized or unnormalized cross correlation be used
-			refine    = (size_t) nameList.getBool("refine"   );//should refinement be used
-			nThread   = (size_t) nameList.getInt ("nthread"  );
-			batchSize = (size_t) nameList.getInt ("batchsize");//number of patterns per work item (should be large enough that the task is significant but small enough that there are enough jobs for load balancing)
+			bw        = (size_t) nml.getInt ("bw"       );//what bandwidth should be used, if 2*bw-1 is product of small primes it is a good candidate for speed (fft is significant fraction of time): 32,38,41,53,63,68,74,88,95,113,123,158
+			normed    = (size_t) nml.getBool("normed"   );//should normalized or unnormalized cross correlation be used
+			refine    = (size_t) nml.getBool("refine"   );//should refinement be used
+			nThread   = (size_t) nml.getInt ("nthread"  );
+			batchSize = (size_t) nml.getInt ("batchsize");//number of patterns per work item (should be large enough that the task is significant but small enough that there are enough jobs for load balancing)
 
 			//parse outputs
-			try {opath      = nameList.getString("opath"     );} catch (...) {opath     .clear();}//if ipath isn't found we'll just use cwd
-			     dataFile   = nameList.getString("datafile"  );
-			try {vendorFile = nameList.getString("vendorfile");} catch (...) {vendorFile.clear();}//if vendorfile isn't found we won't make an vendor file
-			try {ipfName    = nameList.getString("ipfmap"    );} catch (...) {ipfName   .clear();}//if ipfName    isn't found we won't make an ipf     map
-			try {qualName   = nameList.getString("qualmap"   );} catch (...) {qualName  .clear();}//if qualName   isn't found we won't make a  quality map
+			try {opath      = nml.getString("opath"     );} catch (...) {opath     .clear();}//if ipath isn't found we'll just use cwd
+			     dataFile   = nml.getString("datafile"  );
+			try {vendorFile = nml.getString("vendorfile");} catch (...) {vendorFile.clear();}//if vendorfile isn't found we won't make an vendor file
+			try {ipfName    = nml.getString("ipfmap"    );} catch (...) {ipfName   .clear();}//if ipfName    isn't found we won't make an ipf     map
+			try {qualName   = nml.getString("qualmap"   );} catch (...) {qualName  .clear();}//if qualName   isn't found we won't make a  quality map
 
 			//check for unused inputs
-			if(!nameList.fullyParsed()) return nameList.unusedTokens();
+			if(!nml.fullyParsed()) return nml.unusedTokens();
 			return "";
 		}
 
@@ -542,10 +553,12 @@ namespace emsphinx {
 		//@brief: create the output data file and write header data to it
 		void Namelist::writeFileHeader() const {
 			//reconstruct namelist
-			std::string str = namelistFile.empty() ? to_string() : namelistFile;
+			std::string str = namelistFile.empty() ? to_string() : namelistFile;//original string if parsed from file, to_string if built programatically
 			std::istringstream iss(str);
 			nml::NameList nameList;
 			nameList.read(iss);
+			ebsd::Namelist dummy;
+			dummy.parse_nml(nameList);//read files so hdf5 writes used/unused fields correctly
 
 			//open the file and write top level values
 			//this is important to do now since we don't want a failure at the end if e.g. there aren't write privileges
