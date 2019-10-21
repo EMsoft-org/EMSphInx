@@ -79,6 +79,11 @@ namespace fft {
 
 			Wisdom() {read();}//import existing wisdom on creation
 			~Wisdom() {write();}//export existing wisdom on cleanup
+
+			//@brief    : custom signal handler for file reading
+			//@param sig: signal number (SIGILL)
+			//@note     : converts to exception in case the wisdom file contains SIMD -> illegal instruction
+			static void IllegalInstructionHandler(int sig);
 		};
 
 		//single global instance for types of interest to automatically load/save wisdom
@@ -206,6 +211,7 @@ namespace fft {
 #include <mutex>
 #include <set>
 #include <algorithm>
+#include <csignal>
 
 #include "sysnames.hpp"
 
@@ -259,6 +265,37 @@ namespace fft {
 		};
 	#endif
 
+			//@brief    : custom signal handler for file reading
+			//@param sig: signal number (SIGILL)
+			//@note     : converts to exception in case the wisdom file contains SIMD -> illegal instruction
+	#ifdef EM_USE_F
+		template <> void Wisdom<     float >::IllegalInstructionHandler(int sig) {
+			if(SIGILL == sig) {
+				const std::string fileName = getSharedDataDir() + "fftwf.wisdom";
+				throw std::runtime_error("illegal instruction while reading wisdom from " + fileName + " delete wisdom file and rerun");
+			}
+			exit(sig);
+		}
+	#endif
+	#ifdef EM_USE_D
+		template <> void Wisdom<     double>::IllegalInstructionHandler(int sig) {
+			if(SIGILL == sig) {
+				const std::string fileName = getSharedDataDir() + "fftw.wisdom";
+				throw std::runtime_error("illegal instruction while reading wisdom from " + fileName + " delete wisdom file and rerun");
+			}
+			exit(sig);
+		}
+	#endif
+	#ifdef EM_USE_L
+		template <> void Wisdom<long double>::IllegalInstructionHandler(int sig) {
+			if(SIGILL == sig) {
+				const std::string fileName = getSharedDataDir() + "fftwl.wisdom";
+				throw std::runtime_error("illegal instruction while reading wisdom from " + fileName + " delete wisdom file and rerun");
+			}
+			exit(sig);
+		}
+	#endif
+
 		//@brief: helper function to check if a file exists
 		//@param name: name of file to look for
 		//@return: true/false if file does/doesn't exist
@@ -271,25 +308,34 @@ namespace fft {
 	#ifdef EM_USE_F
 		template <> void Wisdom<     float >::read() {
 			const std::string fileName = getSharedDataDir() + "fftwf.wisdom";
-			if(fileExists(fileName))//only try if the file exists
-				if(!fftwf_import_wisdom_from_filename(fileName.c_str()))
-					throw std::runtime_error("failed to read wisdom from " + fileName);
+			if(fileExists(fileName)) { //only try if the file exists
+				signal(SIGILL, &Wisdom<     float >::IllegalInstructionHandler);//switch to custom illegal instruction handler
+				const bool imported = fftwf_import_wisdom_from_filename(fileName.c_str());//try to read wisdom
+				signal(SIGILL, SIG_DFL);//switch back to default illegal instruction handler
+				if(!imported) throw std::runtime_error("failed to read wisdom from " + fileName);
+			}
 		}
 	#endif
 	#ifdef EM_USE_D
 		template <> void Wisdom<     double>::read() {
 			const std::string fileName = getSharedDataDir() + "fftw.wisdom";
-			if(fileExists(fileName))//only try if the file exists
-				if(!fftw_import_wisdom_from_filename (fileName.c_str()))
-					throw std::runtime_error("failed to read wisdom from " + fileName);
+			if(fileExists(fileName)) { //only try if the file exists
+				signal(SIGILL, &Wisdom<     double>::IllegalInstructionHandler);//switch to custom illegal instruction handler
+				const bool imported = fftw_import_wisdom_from_filename (fileName.c_str());//try to read wisdom
+				signal(SIGILL, SIG_DFL);//switch back to default illegal instruction handler
+				if(!imported) throw std::runtime_error("failed to read wisdom from " + fileName);
+			}
 		}
 	#endif
 	#ifdef EM_USE_L
 		template <> void Wisdom<long double>::read() {
 			const std::string fileName = getSharedDataDir() + "fftwl.wisdom";
-			if(fileExists(fileName))//only try if the file exists
-				if(!fftwl_import_wisdom_from_filename(fileName.c_str()))
-					throw std::runtime_error("failed to read wisdom from " + fileName);
+			if(fileExists(fileName)) { //only try if the file exists
+				signal(SIGILL, &Wisdom<long double>::IllegalInstructionHandler);//switch to custom illegal instruction handler
+				const bool imported = fftwl_import_wisdom_from_filename(fileName.c_str());//try to read wisdom
+				signal(SIGILL, SIG_DFL);//switch back to default illegal instruction handler
+				if(!imported) throw std::runtime_error("failed to read wisdom from " + fileName);
+			}
 		}
 	#endif
 
