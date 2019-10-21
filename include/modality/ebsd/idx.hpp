@@ -237,7 +237,15 @@ namespace emsphinx {
 			//create orientation map from input scan dimensions and add phases from master patterns
 			xtal::OrientationMap<Real> newOm(nml.scanDims[0], nml.scanDims[1], nml.scanSteps[0], nml.scanSteps[1]);
 			for(const MasterSpectra<Real>& mp : phases) newOm.phsList.push_back(mp.phase()); 
-			newOm.calib.sTlt = phases.front().getSig();
+			newOm.calib.sTlt  = phases.front().getSig();
+			newOm.calib.cTlt  = geom.dTlt;
+			// newOm.calib.wd    = NAN;
+			// newOm.calib.kv    = NAN;
+			newOm.calib.ven   = ::ebsd::Calibration<Real>::Vendor::EDAX;//just use tsl pattern center for now (it will be converted when a vendor file is written)
+			newOm.calib.ratio = Real(geom.w) / geom.h;
+			newOm.calib.xStar = (geom.cX + Real(geom.w) / 2) / geom.w;
+			newOm.calib.yStar = (geom.cY + Real(geom.h) / 2) / geom.w;
+			newOm.calib.zStar = geom.sDst / (geom.pX * geom.w);
 			const size_t extraScans = 1 == phases.size() ? phases.front().pseudoSym().size() : 1;//do we need extra scans for psuedosymmetry or multi phase
 			om.assign(phases.size() + extraScans, newOm);
 
