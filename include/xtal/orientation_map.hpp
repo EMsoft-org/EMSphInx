@@ -68,7 +68,7 @@ namespace ebsd {
 		Real zStar;//normalized pattern center z
 
 		//@brief: construct an uninitialized calibration
-		Calibration() : sTlt(NAN), cTlt(NAN), wd(NAN), kv(NAN), xStar(NAN), yStar(NAN), zStar(NAN) {}
+		Calibration() : sTlt(NAN), cTlt(NAN), wd(0), kv(0), xStar(NAN), yStar(NAN), zStar(NAN) {}
 
 		//@brief  : convert from current vendor to new vendor
 		//@param v: new vendor
