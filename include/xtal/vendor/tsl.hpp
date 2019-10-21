@@ -74,7 +74,7 @@ namespace tsl {
 		//header information
 		float               pixPerUm             ;
 		float               xStar, yStar, zStar  ;//pattern center calibration
-		float               sampTlt, camTlt  ;//sample/camera tilt in degrees (only in h5 files)
+		float               sampTlt, camTlt      ;//sample/camera tilt in degrees (only in h5 files)
 		float               workingDistance      ;//working distance in mm
 		float               xStep   , yStep      ;//pixel size in microns
 		int32_t             nColsOdd, nColsEven  ;//width in pixels (same for square grid, alternating rows for hex grid)
@@ -95,7 +95,12 @@ namespace tsl {
 		std::vector<int8_t> phase                ;//phase ID of each pixel (indexes into phaseList)
 
 		//@brief: construct an empty orientation map
-		OrientationMap() : gridType(GridType::Unknown) {}
+		OrientationMap() : pixPerUm(1), 
+			xStar(NaN), yStar(NaN), zStar(NaN),
+			sampTlt(NaN), camTlt(NaN),
+			workingDistance(NaN),
+			xStep(NaN), yStep(NaN),
+			gridType(GridType::Unknown) {}
 
 		//@brief         : construct an orientation map from a file
 		//@param fileName: file to read
@@ -777,19 +782,19 @@ namespace tsl {
 			for(int32_t i = 0; i < nColsOdd; i++) {
 				const int32_t idx = j * nRows + i;
 				os << std::setprecision(5);
-				os        << std::setw( 9) <<      eu   [3*i  ];
-				os << ' ' << std::setw( 9) <<      eu   [3*i+1];
-				os << ' ' << std::setw( 9) <<      eu   [3*i+2];
-				os << ' ' << std::setw(12) <<      x    [  i  ];
-				os << ' ' << std::setw(12) <<      y    [  i  ];
+				os        << std::setw( 9) <<      eu   [3*idx  ];
+				os << ' ' << std::setw( 9) <<      eu   [3*idx+1];
+				os << ' ' << std::setw( 9) <<      eu   [3*idx+2];
+				os << ' ' << std::setw(12) <<      x    [  idx  ];
+				os << ' ' << std::setw(12) <<      y    [  idx  ];
 				os << std::setprecision(1);
-				os << ' ' << std::setw( 7) <<      iq   [  i  ];
+				os << ' ' << std::setw( 7) <<      iq   [  idx  ];
 				os << std::setprecision(3);
-				os << ' ' << std::setw( 6) <<      ci   [  i  ];
-				os << ' ' << std::setw( 2) << (int)phase[  i  ];
+				os << ' ' << std::setw( 6) <<      ci   [  idx  ];
+				os << ' ' << std::setw( 2) << (int)phase[  idx  ];
 				if(writeSem) {
-					os << ' ' << std::setw( 6) << sem[i];
-					if(writeFit) os << ' ' << std::setw( 6) << fit[i];
+					os << ' ' << std::setw( 6) << sem[idx];
+					if(writeFit) os << ' ' << std::setw( 6) << fit[idx];
 				}
 				os << '\n';
 			}
