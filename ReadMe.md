@@ -9,6 +9,9 @@
 ## Financial Support 
 The *EMSphInx* code was developed with support from an ONR Vannevar Bush Faculty Fellowship grant, N00014-­16-­1-­2821. The central indexing algorithm is covered by a provisional patent application.
 
+## Master Pattern Database
+A [database of master patterns](https://github.com/EMsoft-org/SHTdatabase) in the new SHT file format is now available. Please note that the database uses SHT version 1.1 while EMSphInx release 0.1 uses SHT version 1.0. Updated binaries compatible with the database will be posted soon. In the interim use of the database requires building EMSphInx from source.
+
 ## Build Instructions
 Nightly builds will be available soon for a variety of operating systems. Binaries are also available as [assets for tagged releases](https://github.com/EMsoft-org/EMSphInx/releases).
 
@@ -50,7 +53,11 @@ FFTW can compile SIMD instructions on some platforms even if they are not availa
 
    convert from EMsoft EBSD master patterns to the new SHT file format used by the indexing programs
 
-5. EMSphInxEBSD (only if EMSPHINX_BUILD_GUIS=ON)
+5. sht2png
+
+   extract north/south hemisphere images and simulation parameters from an SHT file
+
+6. EMSphInxEBSD (only if EMSPHINX_BUILD_GUIS=ON)
 
    graphical user interface to build namelist files for IndexEBSD and/or index patterns directly
 
