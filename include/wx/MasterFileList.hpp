@@ -542,10 +542,10 @@ bool MasterFile::read() {
 				//save meta data
 				kv  = file.header.beamEnergy();
 				tlt = file.header.primaryAngle();
-				sg  = file.material.sgEff();
+				sg  = file.mpData.sgEff();
 
 				//build up bitmask of elements
-				for(const sht::CrystalData& xtal : file.material.xtals) {
+				for(const sht::CrystalData& xtal : file.mpData.xtals) {
 					for(const sht::AtomData& at : xtal.atoms) {
 						size_t z = at.atZ();
 						if(z > 0 && z < 119) {

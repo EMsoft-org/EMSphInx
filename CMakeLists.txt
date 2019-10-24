@@ -152,8 +152,8 @@ include(FetchContent)
 FetchContent_Declare(
 	SHTfile
 	GIT_REPOSITORY "https://github.com/EMsoft-org/SHTfile"
-	GIT_TAG        "cfd13df"
-	# GIT_TAG        "v3.1.2" # just get the most recent version for now
+	GIT_TAG        "e49ad6b"
+	# GIT_TAG        "v3.1.2" # just get a recent version for now
 	# GIT_PROGRESS   TRUE # its currently only 1 file, we probably don't need to print out progress
 )
 # set(FETCHCONTENT_QUIET NO) # again only 1 file

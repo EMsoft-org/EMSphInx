@@ -36,52 +36,6 @@
 
 #include "idx/master.hpp"
 #include "sht_file.hpp"
-/*
-
-#define MINIZ_NO_STDIO
-#define MINIZ_NO_TIME
-#define MINIZ_NO_ZLIB_APIS
-#include "miniz/miniz.c"
-//@brief   : extract the crystal data from an EMsoft master pattern file
-//@param fn: name of file to extract from
-sht::CrystalData extractXtal(char * fn) {
-	//read scalar data
-	int v;
-	sht::CrystalData xtal;
-	H5::H5File file = H5::H5File(fn, H5F_ACC_RDONLY);//read only access
-	file.openGroup("CrystalData").openDataSet("SpaceGroupNumber" ).read(&v        , H5::PredType::NATIVE_INT  ); xtal.sgNum   () = (uint8_t) v;
-	file.openGroup("CrystalData").openDataSet("SpaceGroupSetting").read(&v        , H5::PredType::NATIVE_INT  ); xtal.sgSet   () = (uint8_t) v;
-	file.openGroup("CrystalData").openDataSet("LatticeParameters").read(xtal.lat(), H5::PredType::NATIVE_FLOAT);
-	file.openGroup("CrystalData").openDataSet("Natomtypes"       ).read(&v        , H5::PredType::NATIVE_INT  ); xtal.numAtoms() = (uint16_t) v;
-
-	//read atom data
-	std::vector<int> atomTypes(v);
-	std::vector<float> atomData(v * 5);
-	file.openGroup("CrystalData").openDataSet("AtomData" ).read(atomData .data(), H5::PredType::NATIVE_FLOAT);
-	file.openGroup("CrystalData").openDataSet("Atomtypes").read(atomTypes.data(), H5::PredType::NATIVE_INT  );
-
-
-	xtal.sgAxis() = sht::CrystalData::Axis::Default;
-	xtal.sgCell() = sht::CrystalData::Cell::Default;
-	xtal.oriX() = xtal.oriY() = xtal.oriZ() = 0.0f;
-	xtal.rot()[0] = 1.0f;
-	xtal.rot()[1] = xtal.rot()[2] = xtal.rot()[3] = 0.0f;
-	xtal.weight() = 1.0f;
-	xtal.atoms.resize(v);
-
-	for(int i = 0; i < v; i++) {
-		xtal.atoms[i].x     () = atomData [i*5 + 0];
-		xtal.atoms[i].y     () = atomData [i*5 + 1];
-		xtal.atoms[i].z     () = atomData [i*5 + 2];
-		xtal.atoms[i].occ   () = atomData [i*5 + 3];
-		xtal.atoms[i].charge() = 0.0f;
-		xtal.atoms[i].debWal() = atomData [i*5 + 4];
-		xtal.atoms[i].resFp () = 0.0f;
-		xtal.atoms[i].atZ   () = atomTypes[i      ];
-	}
-	return xtal;
-}
-*/
 
 int main(int argc, char *argv[]) {
 
@@ -100,117 +54,81 @@ int main(int argc, char *argv[]) {
 		const bool nrm = true;
 		emsphinx::MasterSpectra<double> spec(emsphinx::MasterPattern<double>(argv[1]), bw, nrm);
 
+		//save header data
+		float fprm[25];
+		int32_t iprm[11];
+		iprm[1] = (int32_t) sht::Modality::EBSD;
+		iprm[2] = bw;
+		fprm[0] = (float) spec.getKv ();
+		fprm[1] = (float) spec.getSig();
+		fprm[2] = 0.0f;
+		fprm[3] = 0.0f;
+
 		//read in crystal data
 		float lat[6];
-		int32_t sgN, sgS, nAt;
 		H5::H5File file = H5::H5File(argv[1], H5F_ACC_RDONLY);//read only access
-		file.openGroup("CrystalData").openDataSet("SpaceGroupNumber" ).read(&sgN, H5::PredType::NATIVE_INT32);
-		file.openGroup("CrystalData").openDataSet("SpaceGroupSetting").read(&sgS, H5::PredType::NATIVE_INT32);
-		file.openGroup("CrystalData").openDataSet("LatticeParameters").read( lat, H5::PredType::NATIVE_FLOAT);
-		file.openGroup("CrystalData").openDataSet("Natomtypes"       ).read(&nAt, H5::PredType::NATIVE_INT32);
-		std::vector<int32_t> aTy(nAt);
-		std::vector<float> aCd(nAt * 5);
+		file.openGroup("CrystalData").openDataSet("SpaceGroupNumber" ).read(iprm + 3, H5::PredType::NATIVE_INT32); iprm[0] = iprm[3];//effective space group
+		file.openGroup("CrystalData").openDataSet("SpaceGroupSetting").read(iprm + 4, H5::PredType::NATIVE_INT32);
+		file.openGroup("CrystalData").openDataSet("LatticeParameters").read(fprm + 4, H5::PredType::NATIVE_FLOAT);
+		file.openGroup("CrystalData").openDataSet("Natomtypes"       ).read(iprm + 5, H5::PredType::NATIVE_INT32);
+		std::vector<int32_t> aTy(iprm[5]);
+		std::vector<float> aCd(iprm[5] * 5);
 		file.openGroup("CrystalData").openDataSet("AtomData" ).read(aCd .data(), H5::PredType::NATIVE_FLOAT);
 		file.openGroup("CrystalData").openDataSet("Atomtypes").read(aTy.data(), H5::PredType::NATIVE_INT32);
 
-		//read in simulation data
-		float fprm[15];
-		int32_t iprm[5];
+  		//read in simulation data
+		file.openGroup("NMLparameters").openGroup("MCCLNameList"      ).openDataSet("sig"       ).read(fprm + 10, H5::PredType::NATIVE_FLOAT);
+		fprm[11] = NAN;//sig end
+		fprm[12] = NAN;//sig step
+		file.openGroup("NMLparameters").openGroup("MCCLNameList"      ).openDataSet("omega"     ).read(fprm + 13, H5::PredType::NATIVE_FLOAT);
+		file.openGroup("NMLparameters").openGroup("MCCLNameList"      ).openDataSet("EkeV"      ).read(fprm + 14, H5::PredType::NATIVE_FLOAT);
+		file.openGroup("NMLparameters").openGroup("MCCLNameList"      ).openDataSet("Ehistmin"  ).read(fprm + 15, H5::PredType::NATIVE_FLOAT);
+		file.openGroup("NMLparameters").openGroup("MCCLNameList"      ).openDataSet("Ebinsize"  ).read(fprm + 16, H5::PredType::NATIVE_FLOAT);
+		file.openGroup("NMLparameters").openGroup("MCCLNameList"      ).openDataSet("depthmax"  ).read(fprm + 17, H5::PredType::NATIVE_FLOAT);
+		file.openGroup("NMLparameters").openGroup("MCCLNameList"      ).openDataSet("depthstep" ).read(fprm + 18, H5::PredType::NATIVE_FLOAT);
+		fprm[19] = std::numeric_limits<float>::infinity();//thickness
+		file.openGroup("NMLparameters").openGroup("BetheList"         ).openDataSet("c1"        ).read(fprm + 20, H5::PredType::NATIVE_FLOAT);
+		file.openGroup("NMLparameters").openGroup("BetheList"         ).openDataSet("c2"        ).read(fprm + 21, H5::PredType::NATIVE_FLOAT);
+		file.openGroup("NMLparameters").openGroup("BetheList"         ).openDataSet("c3"        ).read(fprm + 22, H5::PredType::NATIVE_FLOAT);
+		file.openGroup("NMLparameters").openGroup("BetheList"         ).openDataSet("sgdbdiff"  ).read(fprm + 23, H5::PredType::NATIVE_FLOAT);
+		file.openGroup("NMLparameters").openGroup("EBSDMasterNameList").openDataSet("dmin"      ).read(fprm + 24, H5::PredType::NATIVE_FLOAT);
 
-		file.openGroup("NMLparameters").openGroup("MCCLNameList"      ).openDataSet("sig"       ).read(fprm +  0, H5::PredType::NATIVE_FLOAT);
-		fprm[1] = NAN;//sig end
-		fprm[2] = NAN;//sig step
-		file.openGroup("NMLparameters").openGroup("MCCLNameList"      ).openDataSet("omega"     ).read(fprm +  3, H5::PredType::NATIVE_FLOAT);
-		file.openGroup("NMLparameters").openGroup("MCCLNameList"      ).openDataSet("EkeV"      ).read(fprm +  4, H5::PredType::NATIVE_FLOAT);
-		file.openGroup("NMLparameters").openGroup("MCCLNameList"      ).openDataSet("Ehistmin"  ).read(fprm +  5, H5::PredType::NATIVE_FLOAT);
-		file.openGroup("NMLparameters").openGroup("MCCLNameList"      ).openDataSet("Ebinsize"  ).read(fprm +  6, H5::PredType::NATIVE_FLOAT);
-		file.openGroup("NMLparameters").openGroup("MCCLNameList"      ).openDataSet("depthmax"  ).read(fprm +  7, H5::PredType::NATIVE_FLOAT);
-		file.openGroup("NMLparameters").openGroup("MCCLNameList"      ).openDataSet("depthstep" ).read(fprm +  8, H5::PredType::NATIVE_FLOAT);
-		fprm[9] = std::numeric_limits<float>::infinity();//thickness
-		file.openGroup("NMLparameters").openGroup("BetheList"         ).openDataSet("c1"        ).read(fprm + 10, H5::PredType::NATIVE_FLOAT);
-		file.openGroup("NMLparameters").openGroup("BetheList"         ).openDataSet("c2"        ).read(fprm + 11, H5::PredType::NATIVE_FLOAT);
-		file.openGroup("NMLparameters").openGroup("BetheList"         ).openDataSet("c3"        ).read(fprm + 12, H5::PredType::NATIVE_FLOAT);
-		file.openGroup("NMLparameters").openGroup("BetheList"         ).openDataSet("sgdbdiff"  ).read(fprm + 13, H5::PredType::NATIVE_FLOAT);
-		file.openGroup("NMLparameters").openGroup("EBSDMasterNameList").openDataSet("dmin"      ).read(fprm + 14, H5::PredType::NATIVE_FLOAT);
+		file.openGroup("NMLparameters").openGroup("MCCLNameList"      ).openDataSet("totnum_el" ).read(iprm +  6, H5::PredType::NATIVE_INT32);
+		file.openGroup("NMLparameters").openGroup("MCCLNameList"      ).openDataSet("multiplier").read(iprm +  7, H5::PredType::NATIVE_INT32);
+		file.openGroup("NMLparameters").openGroup("MCCLNameList"      ).openDataSet("numsx"     ).read(iprm +  8, H5::PredType::NATIVE_INT32);
+		file.openGroup("NMLparameters").openGroup("EBSDMasterNameList").openDataSet("npx"       ).read(iprm +  9, H5::PredType::NATIVE_INT32);
+		iprm[10] = 1;//lattitude grid type
 
-		file.openGroup("NMLparameters").openGroup("MCCLNameList"      ).openDataSet("totnum_el" ).read(iprm +  0, H5::PredType::NATIVE_INT32);
-		file.openGroup("NMLparameters").openGroup("MCCLNameList"      ).openDataSet("multiplier").read(iprm +  1, H5::PredType::NATIVE_INT32);
-		file.openGroup("NMLparameters").openGroup("MCCLNameList"      ).openDataSet("numsx"     ).read(iprm +  2, H5::PredType::NATIVE_INT32);
-		file.openGroup("NMLparameters").openGroup("EBSDMasterNameList").openDataSet("npx"       ).read(iprm +  3, H5::PredType::NATIVE_INT32);
-		iprm[4] = 1;//lattitude grid type
+		//build set of elements in order for formula estimate (should really include multiplicity)
+		std::set<int32_t> atomType(aTy.begin(), aTy.end());
+		std::string form;
+		static const std::vector<std::string> AtSyb = {
+			"H" , "He", "Li", "Be", "B" , "C" , "N" , "O" , "F" , "Ne", "Na", "Mg", "Al", "Si", "P" , "S" ,
+			"Cl", "Ar", "K" , "Ca", "Sc", "Ti", "V" , "Cr", "Mn", "Fe", "Co", "Ni", "Cu", "Zn", "Ga", "Ge",
+			"As", "Se", "Br", "Kr", "Rb", "Sr", "Y" , "Zr", "Nb", "Mo", "Tc", "Ru", "Rh", "Pd", "Ag", "Cd",
+			"In", "Sn", "Sb", "Te", "I" , "Xe", "Cs", "Ba", "La", "Ce", "Pr", "Nd", "Pm", "Sm", "Eu", "Gd",
+			"Tb", "Dy", "Ho", "Er", "Tm", "Yb", "Lu", "Hf", "Ta", "W" , "Re", "Os", "Ir", "Pt", "Au", "Hg",
+			"Tl", "Pb", "Bi", "Po", "At", "Rn", "Fr", "Ra", "Ac", "Th", "Pa", "U" , "Np", "Pu", "Am", "Cm",
+			"Bk", "Cf", "Es", "Fm", "Md", "No", "Lr", "Rf", "Db", "Sg", "Bh", "Hs", "Mt", "Ds", "Rg", "Cn",
+			"Nh", "Fl", "Mc", "Lv", "Ts", "Og", 
+		};
+		for(const int32_t& z : atomType) form += AtSyb[z-1];
 
-		//build compression flags
-		// int8_t flg[2];
-		// flg[0] = spec.nFold();
-		// flg[1] = (spec.invSym() ? 1 : 0) + (spec.mirror() ? 2 : 0) + (4 * spec.phase().pg.mmType());
-
-		//@brief    : write a file using EMsoft style EBSD data
-		//@prief fn : file name to write
-		//@prief nt : notes string
-		//@param sgN: space group number [1,230]
-		//@param sgS: space group setting [1,2]
-		//@param nAt: number of atoms
-		//@param aTy: atom types (nAt atomic numbers)
-		//@param aCd: atom coordinates, (nAt * 5 floats {x, y, z, occupancy, Debye-Waller in nm^2})
-		//@param lat: lattice parameters {a, b, a, alpha, beta, gamma} (in nm / degree)
-		//@param fprm: floating point parameters (float32 EMsoftED parameters in order)
-		//@param iprm: integer parameters {# electrons, electron multiplier, numsx, npx, latgridtype}
-		//@param bw : bandwidth
-		//@param flg: symmetry flags {zRot, mirInv}
-		//@param alm: actual harmonics (uncompressed format)
-		std::string notes("notes string");
-		std::string doi("doi string");
-		sht::File::EMsoftEBSD(argv[2], notes.c_str(), doi.c_str(), sgN, sgS, nAt, aTy.data(), aCd.data(), lat, fprm, iprm, (int32_t)bw, (double*)spec.data());
-
-
-
-
-/*
-
-
-
-		sht::File file;
-
-		//build header info
-		file.header.modality() = sht::Modality::EBSD;
-		file.header.setDoi("doistr");
-		file.header.setNotes("file notes");
-
-		//vendor + simullen set by file
-
-		file.header.beamEnergy  () = (float) spec.getKv ();
-		file.header.primaryAngle() = (float) spec.getSig();
-
-		//build material data
-		file.material.xtals.push_back(extractXtal(argv[1]));
-		file.material.numXtal() = 1;
-		file.material.sgEff  () = file.material.xtals.front().sgNum();
-
-		//build simulation meta data
-				// std::unique_ptr<SimulationData> simulMeta;//can be null if header.simDataSize() == 0
-
-		//extract harmonics
-		const int32_t nHarm = sht::HarmonicsData::NumHarm(bw, (int8_t)spec.nFold(), spec.invSym(), spec.mirror());
-		file.harmonics.bw     () = bw;
-		file.harmonics.zRot   () = (int8_t) spec.nFold();
-		file.harmonics.mirInv () = (spec.invSym() ? 1 : 0) | (spec.mirror() ? 2 : 0);
-		file.harmonics.doubCnt() = nHarm * 2;
-		file.harmonics.alm.resize(nHarm * 2);
-		double * pHrm = file.harmonics.alm.data();
-		for(size_t m = 0; m < bw; m++) {
-			std::complex<double> * const row = spec.data() + bw * m;
-			if(spec.nFold() < 2 ? false : 0 != m % spec.nFold()) continue;//systemic zeros
-			for(size_t l = m; l < bw; l++) {
-				if( (spec.invSym() && 0 != l % 2) || (spec.mirror() && 0 != (l + m) % 2) ) continue;
-				*pHrm++ = row[l].real();
-				*pHrm++ = row[l].imag();
-			}
-		}
-
-		//if we made it this far everything needed was parsed, write out the result
+		//assemble file
+		sht::File shtFile;
+		std::string doi = "https://doi.org/10.1016/j.ultramic.2019.112841";
+		std::string note = "created with mp2sht";
+		char emVers[8] = "5_0_0_0";
+		std::string cprm = form + '\0';
+		cprm += "\0";//material name e.g. gamma
+		cprm += "\0";//structure symbol e.g. L1_2
+		cprm += "\0";//references
+		cprm += "\0";//note
+		shtFile.initFileEMsoft(iprm, fprm, doi.c_str(), note.c_str(), (double*)spec.data());//initialize header + harmonics
+		shtFile.addDataEMsoft(iprm + 3, fprm + 4, aTy.data(), aCd.data(), emVers, cprm.c_str());//add crystal + simulation data
 		std::ofstream os(argv[2], std::ios::out | std::ios::binary);
-		file.write(os);
-		*/
+		shtFile.write(os);
+
 		return EXIT_SUCCESS;
 	} catch (std::exception& e) {
 		std::cout << e.what() << '\n';

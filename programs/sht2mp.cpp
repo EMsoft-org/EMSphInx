@@ -66,7 +66,6 @@ void writePng(uint8_t* im, const size_t w, const size_t h, const size_t samp, st
 
 int main(int argc, char *argv[]) {
 	try {
-
 		//sanity check argument count
 		//this should be adjusted in the future to allow batch conversion since there is a good amount of overhead in building the transformer
 		if(4 != argc) {
@@ -76,7 +75,7 @@ int main(int argc, char *argv[]) {
 			std::cout << "\tshFile    - location to write south hemisphere image (*.png)\n";
 			return EXIT_FAILURE;
 		}
-		
+
 		//read in the master spectrum
 		emsphinx::MasterSpectra<double> spec;
 		spec.read(argv[1]);
@@ -106,11 +105,9 @@ int main(int argc, char *argv[]) {
 		std::ifstream is(argv[1], std::ios::in | std::ios::binary);
 		file.read(is);
 
+		//print out header info
 		std::cout << "file version " << (int)file.header.fileVersion()[0] << '.' << (int)file.header.fileVersion()[1] << "\n";
 		std::cout << "written with software version " << std::string(file.header.softwareVersion(), file.header.softwareVersion()+8) << "\n";
-		std::cout << "notes   : `" << file.header.notes << "'\n";
-		std::cout << "doi     : `" << file.header.doi << "'\n";
-
 		std::cout << "modality: ";
 		switch(file.header.modality()) {
 			case sht::Modality::Unknown: std::cout << "Unknown\n"; break;
@@ -120,23 +117,36 @@ int main(int argc, char *argv[]) {
 			case sht::Modality::PED    : std::cout << "PED    \n"; break;
 			case sht::Modality::Laue   : std::cout << "Laue   \n"; break;
 			default                    : std::cout << "invalid\n"; break;
-
 		}
-
-		std::cout << "vendor  : ";
-		switch(file.header.vendor()) {
-			case sht::Vendor::Unknown: std::cout << "Unknown\n"; break;
-			case sht::Vendor::EMsoft : std::cout << "EMsoft \n"; break;
-			default                  : std::cout << "invalid\n"; break;
-		}
-
 		std::cout << "beam eng: "  << (int) file.header.beamEnergy() << '\n';
 		std::cout << "angle 1 : "  << (int) file.header.primaryAngle() << '\n';
 		std::cout << "angle 2 : "  << (int) file.header.secondaryAngle() << '\n';
+		std::cout << "res : "  << (int) file.header.reservedParam() << '\n';
+		std::cout << "notes   : `" << file.header.notes.substr(0, file.header.noteLen()) << "'\n";
+		std::cout << "doi     : `" << file.header.doi.substr(0, file.header.doiLen()) << "'\n";
+		std::cout << '\n';
 
-		std::cout << "rotations are " << (char) file.material.rotSense() << " with pijk = " << (int) file.material.pijk() << '\n';
-		std::cout << "material has " << (int)file.material.numXtal() << " crystals with effective sg# " << (int)file.material.sgEff() << ":\n";
-		for(const sht::CrystalData& xtal : file.material.xtals) {
+		//print out master pattern info
+		std::cout << "master pattern composed from " << (int)file.mpData.numXtal() << " crystals with effective sg# " << (int)file.mpData.sgEff() << '\n';
+		std::cout << "rotations are " << (char) file.mpData.rotSense() << " with pijk = " << (int) file.mpData.pijk() << '\n';
+		std::cout << "simulation data " << file.mpData.simMetaSize() << " bytes from vendor ";
+		switch(file.mpData.vendor()) {
+			case sht::Vendor::Unknown: std::cout << "Unknown"; break;
+			case sht::Vendor::EMsoft : std::cout << "EMsoft" ; break;
+			default                  : std::cout << "invalid"; break;
+		}
+		std::cout << " for modality ";
+		switch(file.header.modality()) {
+			case sht::Modality::Unknown: std::cout << "Unknown\n"; break;
+			case sht::Modality::EBSD   : std::cout << "EBSD   \n"; break;
+			case sht::Modality::ECP    : std::cout << "ECP    \n"; break;
+			case sht::Modality::TKD    : std::cout << "TKD    \n"; break;
+			case sht::Modality::PED    : std::cout << "PED    \n"; break;
+			case sht::Modality::Laue   : std::cout << "Laue   \n"; break;
+			default                    : std::cout << "invalid\n"; break;
+		}
+		for(int8_t i = 0; i < file.mpData.numXtal(); i++) {
+			const sht::CrystalData& xtal = file.mpData.xtals[i];
 			std::cout << "\tsg " << (int) xtal.sgNum() << " setting " << (int) xtal.sgSet() << '\n';
 			std::cout << "\t\taxis / cell choice: " << (int) xtal.sgAxis() << " / " << (int) xtal.sgCell() << "\n";
 			std::cout << "\t\tadditional origin shift: " << xtal.oriX() << ", " << xtal.oriY() << ", " << xtal.oriZ() << "\n";
@@ -144,48 +154,49 @@ int main(int argc, char *argv[]) {
 			std::cout << "\t\tabg: " << xtal.lat()[3] << ", " << xtal.lat()[4] << ", " << xtal.lat()[5] << "\n";
 			std::cout << "\t\trot: " << xtal.rot()[0] << ", " << xtal.rot()[1] << ", " << xtal.rot()[2] << ", " << xtal.rot()[3] << "\n";
 			std::cout << "\t\twgt: " << xtal.weight() << '\n';
-			std::cout << "\t\t" << (int) xtal.numAtoms() << ":\n";
+			std::cout << "\t\tfrm: " << '`' << xtal.form.substr(0, xtal.formulaLen  ()) << '\'' << '\n';
+			std::cout << "\t\tnam: " << '`' << xtal.name.substr(0, xtal.matNameLen  ()) << '\'' << '\n';
+			std::cout << "\t\tsym: " << '`' << xtal.symb.substr(0, xtal.structSymLen()) << '\'' << '\n';
+			std::cout << "\t\tref: " << '`' << xtal.refs.substr(0, xtal.refsLen     ()) << '\'' << '\n';
+			std::cout << "\t\tnot: " << '`' << xtal.note.substr(0, xtal.noteLen     ()) << '\'' << '\n';
+			std::cout << "\t\t" << (int) xtal.numAtoms() << " atoms:\n";
 
 			for(const sht::AtomData& at : xtal.atoms) {
-				std::cout << "\t\t\t" << (int) at.atZ() << ": " << at.x() / 24.0f << ' ' << at.y() / 24.0f << ' ' << at.z() / 24.0f << ' ' << at.occ() << ' ' << at.debWal() << '\n';
+				std::cout << "\t\t\t" << (int) at.atZ() << ": " << at.x() / 24.0f << ' ' << at.y() / 24.0f << ' ' << at.z() / 24.0f << ' ' << at.occ() << ' ' << at.charge() << ' ' << at.debWal() << '\n';
 			}
-		}
 
-		if(NULL != file.simulMeta.get()) {
-			std::cout << "has simulation data\n";
-			if(sht::Vendor::EMsoft == file.header.vendor  () &&
+			if(sht::Vendor::EMsoft == file.mpData.vendor  () &&
 			   sht::Modality::EBSD == file.header.modality() &&
-			   80 == file.simulMeta->size()) {
-				sht::EMsoftED* pED = (sht::EMsoftED*) file.simulMeta.get();
+			   NULL != file.mpData.simul[i].get()) {
+				sht::EMsoftED* pED2 = (sht::EMsoftED*) file.mpData.simul[i].get();
 
-
-				std::cout << "\tsigStart : " << pED->sigStart () << '\n';
-				std::cout << "\tsigEnd   : " << pED->sigEnd   () << '\n';
-				std::cout << "\tsigStep  : " << pED->sigStep  () << '\n';
-				std::cout << "\tomega    : " << pED->omega    () << '\n';
-				std::cout << "\tkeV      : " << pED->keV      () << '\n';
-				std::cout << "\teHistMin : " << pED->eHistMin () << '\n';
-				std::cout << "\teBinSize : " << pED->eBinSize () << '\n';
-				std::cout << "\tdepthMax : " << pED->depthMax () << '\n';
-				std::cout << "\tdepthStep: " << pED->depthStep() << '\n';
-				std::cout << "\tthickness: " << pED->thickness() << '\n';
-				std::cout << "\ttotNumEl : " << pED->totNumEl () << '\n';
-				std::cout << "\tnumSx    : " << pED->numSx    () << '\n';
-				std::cout << "\tc1       : " << pED->c1       () << '\n';
-				std::cout << "\tc2       : " << pED->c2       () << '\n';
-				std::cout << "\tc3       : " << pED->c3       () << '\n';
-				std::cout << "\tsigDbDiff: " << pED->sigDbDiff() << '\n';
-				std::cout << "\tdMin     : " << pED->dMin     () << '\n';
-				std::cout << "\tnumPx    : " << pED->numPx    () << '\n';
+				std::cout << "\temVers   : " << std::string(pED2->emsoftVersion()) << '\n';
+				std::cout << "\tsigStart : " << pED2->sigStart () << '\n';
+				std::cout << "\tsigEnd   : " << pED2->sigEnd   () << '\n';
+				std::cout << "\tsigStep  : " << pED2->sigStep  () << '\n';
+				std::cout << "\tomega    : " << pED2->omega    () << '\n';
+				std::cout << "\tkeV      : " << pED2->keV      () << '\n';
+				std::cout << "\teHistMin : " << pED2->eHistMin () << '\n';
+				std::cout << "\teBinSize : " << pED2->eBinSize () << '\n';
+				std::cout << "\tdepthMax : " << pED2->depthMax () << '\n';
+				std::cout << "\tdepthStep: " << pED2->depthStep() << '\n';
+				std::cout << "\tthickness: " << pED2->thickness() << '\n';
+				std::cout << "\ttotNumEl : " << pED2->totNumEl () << '\n';
+				std::cout << "\tnumSx    : " << pED2->numSx    () << '\n';
+				std::cout << "\tc1       : " << pED2->c1       () << '\n';
+				std::cout << "\tc2       : " << pED2->c2       () << '\n';
+				std::cout << "\tc3       : " << pED2->c3       () << '\n';
+				std::cout << "\tsigDbDiff: " << pED2->sigDbDiff() << '\n';
+				std::cout << "\tdMin     : " << pED2->dMin     () << '\n';
+				std::cout << "\tnumPx    : " << pED2->numPx    () << '\n';
 				std::cout << "\tlatGridType: ";
-				switch( pED->latGridType()) {
+				switch( pED2->latGridType()) {
 					case 1 : std::cout << "square lambert\n";break;
 					case 2 : std::cout << "square legendre\n";break;
 					default: std::cout << "unknown\n";break;
 				} 
 			}
 		}
-
 
 	} catch(std::exception& e) {
 		std::cout << e.what() << '\n';

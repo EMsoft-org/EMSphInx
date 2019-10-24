@@ -623,11 +623,11 @@ namespace emsphinx {
 		MasterData<Real>::kv  = (Real) file.header.beamEnergy  ();
 		MasterData<Real>::sig = (Real) file.header.primaryAngle();
 		mBw = file.harmonics.bw     ();
-		MasterData<Real>::phs.pg = xtal::PointGroup(file.material.sgEff  ());
+		MasterData<Real>::phs.pg = xtal::PointGroup(file.mpData.sgEff  ());
 		MasterData<Real>::phs.name.clear();
 		MasterData<Real>::pSm.clear();
-		if(1 == file.material.numXtal()) {
-			for(size_t i = 0; i < 6; i++) MasterData<Real>::phs.lat[i] = (Real) file.material.xtals[0].lat()[i];
+		if(1 == file.mpData.numXtal()) {
+			for(size_t i = 0; i < 6; i++) MasterData<Real>::phs.lat[i] = (Real) file.mpData.xtals[0].lat()[i];
 		}
 		
 		//resize data + uncompress
