@@ -55,14 +55,15 @@ struct MasterFile {
 
 	//actual data
 	wxString    pth;//full path
+	wxString    frm;//formula
+	wxString    nam;//name
+	wxString    syb;//structure symbol
 	float       kv ;//voltage
 	float       tlt;//tilt (degrees)
 	ElementMask els;//elements
 	int         sg ;//space group number
 
 	//string versions of data
-	wxString    dir;//directory component of path
-	wxString    fil;//file component of path
 	wxString    sEl;//element
 
 	std::bitset<4> flg;//flags for external use (I'll use them to mark the filtered and checked status)
@@ -80,7 +81,7 @@ struct MasterFile {
 	wxString sgName() const {return sg < 1 || sg > 230 ? _("?") : SgNames[sg-1];}
 
 	//@brief: constructor takes file path
-	MasterFile(wxString path = "") : pth(path), dir(wxFileName(pth).GetPath()), fil(wxFileName(pth).GetName()) {}
+	MasterFile(wxString path = "") : pth(path) {}
 
 	//@brief: helper functions to sort a MasterFile by various fields
 	//@note : most sort functions use pth as tiebreak
@@ -88,8 +89,12 @@ struct MasterFile {
 	static bool SameComp(const CompFunc lhs, const CompFunc rhs) {return getAddress(lhs) == getAddress(rhs);}
 	static bool PthAsc (const MasterFile& lhs, const MasterFile& rhs) {return lhs.pth < rhs.pth;}//operator<
 	static bool PthDes (const MasterFile& lhs, const MasterFile& rhs) {return lhs.pth > rhs.pth;}
-	static bool FilAsc (const MasterFile& lhs, const MasterFile& rhs) {return lhs.fil == rhs.fil ? lhs.pth < rhs.pth : lhs.fil < rhs.fil;}
-	static bool FilDes (const MasterFile& lhs, const MasterFile& rhs) {return lhs.fil == rhs.fil ? lhs.pth > rhs.pth : lhs.fil > rhs.fil;}
+	static bool FrmAsc (const MasterFile& lhs, const MasterFile& rhs) {return lhs.frm == rhs.frm ? lhs.pth < rhs.pth : lhs.frm < rhs.frm;}
+	static bool FrmDes (const MasterFile& lhs, const MasterFile& rhs) {return lhs.frm == rhs.frm ? lhs.pth > rhs.pth : lhs.frm > rhs.frm;}
+	static bool NamAsc (const MasterFile& lhs, const MasterFile& rhs) {return lhs.nam == rhs.nam ? lhs.pth < rhs.pth : lhs.nam < rhs.nam;}
+	static bool NamDes (const MasterFile& lhs, const MasterFile& rhs) {return lhs.nam == rhs.nam ? lhs.pth > rhs.pth : lhs.nam > rhs.nam;}
+	static bool SybAsc (const MasterFile& lhs, const MasterFile& rhs) {return lhs.syb == rhs.syb ? lhs.pth < rhs.pth : lhs.syb < rhs.syb;}
+	static bool SybDes (const MasterFile& lhs, const MasterFile& rhs) {return lhs.syb == rhs.syb ? lhs.pth > rhs.pth : lhs.syb > rhs.syb;}
 	static bool KvAsc  (const MasterFile& lhs, const MasterFile& rhs) {return lhs.kv  == rhs.kv  ? lhs.pth < rhs.pth : lhs.kv  < rhs.kv ;}
 	static bool KvDes  (const MasterFile& lhs, const MasterFile& rhs) {return lhs.kv  == rhs.kv  ? lhs.pth > rhs.pth : lhs.kv  > rhs.kv ;}
 	static bool TltAsc (const MasterFile& lhs, const MasterFile& rhs) {return lhs.tlt == rhs.tlt ? lhs.pth < rhs.pth : lhs.tlt < rhs.tlt;}
@@ -117,8 +122,10 @@ struct MasterFile {
 
 	//@brief    : set the search flag using search string
 	//@param str: search string
-	void search(wxString str) {flg.set(3, wxNOT_FOUND != pth.Lower().Find(str) );}
-	// void search(wxString str) {flg.set(3, wxNOT_FOUND != pth.Lower().Find(str) || wxNOT_FOUND != sgName().Lower().Find(str) );}
+	void search(wxString str) {flg.set(3, wxNOT_FOUND != pth.Lower().Find(str) || 
+	                                      wxNOT_FOUND != frm.Lower().Find(str) ||
+	                                      wxNOT_FOUND != nam.Lower().Find(str) ||
+	                                      wxNOT_FOUND != syb.Lower().Find(str) );}
 
 	//@brief : check if this item has passed the filter and search tests
 	//@return: true if both passed, false otherwise
@@ -257,13 +264,14 @@ void MasterFileList::ColClicked(wxListEvent& Event) {
 	if(m_srtFnc) {
 		switch(Event.GetColumn()) {
 			case 0: setSort( MasterFile::SameComp(m_srtFnc, MasterFile::PthAsc ) ? MasterFile::PthDes  : MasterFile::PthAsc ); break;
-			case 1: setSort( MasterFile::SameComp(m_srtFnc, MasterFile::FilAsc ) ? MasterFile::FilDes  : MasterFile::FilAsc ); break;
-			case 2: setSort( MasterFile::SameComp(m_srtFnc, MasterFile::KvAsc  ) ? MasterFile::KvDes   : MasterFile::KvAsc  ); break;
-			case 3: setSort( MasterFile::SameComp(m_srtFnc, MasterFile::TltAsc ) ? MasterFile::TltDes  : MasterFile::TltAsc ); break;
-			case 4: setSort( MasterFile::SameComp(m_srtFnc, MasterFile::ElsAsc ) ? MasterFile::ElsDes  : MasterFile::ElsAsc ); break;
-			case 5: setSort( MasterFile::SameComp(m_srtFnc, MasterFile::SysAsc ) ? MasterFile::SysDes  : MasterFile::SysAsc ); break;
-			case 6: setSort( MasterFile::SameComp(m_srtFnc, MasterFile::SgAsc  ) ? MasterFile::SgDes   : MasterFile::SgAsc  ); break;
-			case 7: setSort( MasterFile::SameComp(m_srtFnc, MasterFile::SgNmAsc) ? MasterFile::SgNmDes : MasterFile::SgNmAsc); break;
+			case 1: setSort( MasterFile::SameComp(m_srtFnc, MasterFile::FrmAsc ) ? MasterFile::FrmDes  : MasterFile::FrmAsc ); break;
+			case 2: setSort( MasterFile::SameComp(m_srtFnc, MasterFile::NamAsc ) ? MasterFile::NamDes  : MasterFile::NamAsc ); break;
+			case 3: setSort( MasterFile::SameComp(m_srtFnc, MasterFile::SybAsc ) ? MasterFile::SybDes  : MasterFile::SybAsc ); break;
+			case 4: setSort( MasterFile::SameComp(m_srtFnc, MasterFile::KvAsc  ) ? MasterFile::KvDes   : MasterFile::KvAsc  ); break;
+			case 5: setSort( MasterFile::SameComp(m_srtFnc, MasterFile::TltAsc ) ? MasterFile::TltDes  : MasterFile::TltAsc ); break;
+			case 6: setSort( MasterFile::SameComp(m_srtFnc, MasterFile::ElsAsc ) ? MasterFile::ElsDes  : MasterFile::ElsAsc ); break;
+			case 7: setSort( MasterFile::SameComp(m_srtFnc, MasterFile::SysAsc ) ? MasterFile::SysDes  : MasterFile::SysAsc ); break;
+			case 8: setSort( MasterFile::SameComp(m_srtFnc, MasterFile::SgAsc  ) ? MasterFile::SgDes   : MasterFile::SgAsc  ); break;
 		}
 	}
 }
@@ -366,8 +374,10 @@ MasterFileList::MasterFileList(wxWindow* parent, const wxWindowID id, const wxPo
 	m_srtFnc(MasterFile::PthAsc)
 {
 	// add columns
-	AppendColumn("Folder"  , wxLIST_FORMAT_LEFT, 70);
-	AppendColumn("File"    , wxLIST_FORMAT_LEFT, 140);
+	AppendColumn("File"    , wxLIST_FORMAT_LEFT, 70);
+	AppendColumn("Formula" , wxLIST_FORMAT_LEFT, 80);
+	AppendColumn("Name"    , wxLIST_FORMAT_LEFT, 95);
+	AppendColumn("S.Syb"   , wxLIST_FORMAT_LEFT, 50);
 	AppendColumn("kV"      , wxLIST_FORMAT_LEFT, 35);
 	AppendColumn("Tilt"    , wxLIST_FORMAT_LEFT, 35);
 	AppendColumn("Els"     , wxLIST_FORMAT_LEFT, 45);
@@ -397,14 +407,16 @@ MasterFileList::~MasterFileList()
 wxString MasterFileList::OnGetItemText(long item, long column) const {
 	const std::vector<MasterFile>::iterator& mf = m_disFiles[item];
 	switch(column) {
-		case 0: return mf->dir;
-		case 1: return mf->fil;
-		case 2: return wxString::Format(wxT("%.1f"), mf->kv );
-		case 3: return wxString::Format(wxT("%.1f"), mf->tlt);
-		case 4: return mf->sEl;
-		case 5: return mf->system();
-		case 6: return wxString::Format(wxT("%i"), mf->sg);
-		case 7: return mf->sgName();
+		case 0: return mf->pth;
+		case 1: return mf->frm;
+		case 2: return mf->nam;
+		case 3: return mf->syb;
+		case 4: return wxString::Format(wxT("%.1f"), mf->kv );
+		case 5: return wxString::Format(wxT("%.1f"), mf->tlt);
+		case 6: return mf->sEl;
+		case 7: return mf->system();
+		case 8: return wxString::Format(wxT("%i"), mf->sg);
+		// case 9: return mf->sgName();
 		default: return _("?");
 	}
 	return _("?");
@@ -524,6 +536,9 @@ wxString MasterFile::system() const {
 //@brief: attempt to read the file currently stored in pth
 //@return: true if successful
 bool MasterFile::read() {
+	frm = "";
+	nam = "";
+	syb = "";
 	kv  = 0;
 	tlt = 0;
 	els = ElementMask();
@@ -546,6 +561,22 @@ bool MasterFile::read() {
 
 				//build up bitmask of elements
 				for(const sht::CrystalData& xtal : file.mpData.xtals) {
+					std::string xFrm = xtal.form.substr(0, xtal.formulaLen  ());
+					std::string xNam = xtal.name.substr(0, xtal.matNameLen  ());
+					std::string xSyb = xtal.symb.substr(0, xtal.structSymLen());
+					if(!xFrm.empty()) {
+						if(!frm.IsEmpty()) frm += '+';
+						frm += xFrm;
+					}
+					if(!xNam.empty()) {
+						if(!nam.IsEmpty()) nam += '+';
+						nam += xNam;
+					}
+					if(!xSyb.empty()) {
+						if(!syb.IsEmpty()) syb += '+';
+						syb += xSyb;
+					}
+
 					for(const sht::AtomData& at : xtal.atoms) {
 						size_t z = at.atZ();
 						if(z > 0 && z < 119) {
