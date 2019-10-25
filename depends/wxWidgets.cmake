@@ -65,9 +65,9 @@ if(EMSPHINX_BUILD_wxWidgets)
 		find_package(PkgConfig)
 		pkg_check_modules(GTK3 QUIET gtk+-3.0)
 		if(NOT GTK3_FOUND)
-			message (FATAL_ERROR "wxWidgets needs gtk3, make sure you have it with e.g.:\n"
-			                    "\tdebian 'apt-get install libgtk-3-dev build-essential'\n"
-			                    "\tcentos 'yum install gtk3-devel'\n")
+			message(FATAL_ERROR "wxWidgets needs gtk3 and libSM, make sure you have it with e.g.:\n"
+			                    "\tdebian 'apt-get install libgtk-3-dev libsm-dev build-essential'\n"
+			                    "\tcentos 'yum install gtk3-devel libSM-devel'\n")
 		endif()
 
 		# static linking has the same issue as hdf5 (the gtk .a file references commands in a .so so -ld is needed)
