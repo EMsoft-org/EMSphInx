@@ -57,9 +57,23 @@ if(EMSPHINX_BUILD_wxWidgets)
 	endif()
 
 	# set(wxBUILD_PRECOMP OFF) # this prevents errors on recompile after the git hash changes
-	if(UNIX AND NOT APPLE)
-		message (WARNING "wxWidgets needs gtk3, make sure you have it with e.g. 'apt-get install libgtk-3-dev build-essential'")
+	if(UNIX AND NOT APPLE) # linux
+		# use gtk3 on linux
 		set(wxBUILD_TOOLKIT gtk3 CACHE STRING "Toolkit used by wxWidgets")
+
+		# try to find gtk3 (this is based on wxWidget's cmake: wxWidgets/build/cmake/modules/FindGTK3.cmake)
+		find_package(PkgConfig)
+		pkg_check_modules(GTK3 QUIET gtk+-3.0)
+		if(NOT GTK3_FOUND)
+			message (FATAL_ERROR "wxWidgets needs gtk3, make sure you have it with e.g.:\n"
+			                    "\tdebian 'apt-get install libgtk-3-dev build-essential'\n"
+			                    "\tcentos 'yum install gtk3-devel'\n")
+		endif()
+
+		# static linking has the same issue as hdf5 (the gtk .a file references commands in a .so so -ld is needed)
+		if(NOT EMSPHINX_BUILD_SHARED)
+			set(CMAKE_EXE_LINKER_FLAGS "${CMAKE_EXE_LINKER_FLAGS} -ldl")
+		endif()
 	endif()
 
 	if(APPLE)

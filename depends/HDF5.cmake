@@ -92,8 +92,10 @@ if(EMSPHINX_BUILD_HDF5)
 	endforeach()
 
 	if(UNIX AND NOT APPLE)
-        list(APPEND HDF5_LIBRARIES ${CMAKE_DL_LIBS}) # this isn't needed for (but doesn't disrupt) debian, is required for ubuntu
-		set(CMAKE_EXE_LINKER_FLAGS "${CMAKE_EXE_LINKER_FLAGS} -ldl")
+		list(APPEND HDF5_LIBRARIES ${CMAKE_DL_LIBS}) # this isn't needed for (but doesn't disrupt) debian, is required for ubuntu
+		if(NOT EMSPHINX_BUILD_SHARED)
+			set(CMAKE_EXE_LINKER_FLAGS "${CMAKE_EXE_LINKER_FLAGS} -ldl")
+		endif()
 	endif()
 
 else(EMSPHINX_BUILD_HDF5)
