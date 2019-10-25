@@ -44,6 +44,8 @@
 #include <wx/sizer.h>
 #include <wx/panel.h>
 #include <wx/valnum.h>
+#include <wx/button.h>
+#include <wx/tglbtn.h>
 
 ///////////////////////////////////////////////////////////////////////////
 
@@ -70,24 +72,56 @@ class MasterFileFilterPanel : public wxPanel
 		wxTextCtrl        * m_sgMin ;
 		wxTextCtrl        * m_sgMax ;
 		wxChoice          * m_laue  ;
+		wxCheckBox        * m_chkEl ;
+		wxToggleButton    * m_btnExt;
+		wxButton          * m_btnClr;
 		PeriodicTablePanel* m_prdTbl;
 
-		void ChoiceChanged( wxCommandEvent& event );
+		void ChkKvChanged (wxCommandEvent& event) { if(!event.IsChecked()) clearKv (); }//m_chkKv  clicked
+		void ChkTltChanged(wxCommandEvent& event) { if(!event.IsChecked()) clearTlt(); }//m_chkTlt clicked
+		void ChkSgChanged (wxCommandEvent& event) { if(!event.IsChecked()) clearSg (); }//m_chkSg  clicked
+		void ChkElChanged (wxCommandEvent& event) { if(!event.IsChecked()) clearEl (); }//m_chkSg  clicked
+		void ClearPressed (wxCommandEvent& event) { clearEl (); }
+
+		void ChoiceChanged  ( wxCommandEvent& event );
+		void ElementsChanged( wxCommandEvent& event ) {m_chkEl->SetValue(ElementMask() != m_prdTbl->getMask());}
+
+		//tick the filter use checkbox when text fields are changed
+		void TxtKvMinChanged ( wxCommandEvent& event ) { m_chkKv ->SetValue(true); }
+		void TxtKvMaxChanged ( wxCommandEvent& event ) { m_chkKv ->SetValue(true); }
+		void TxtTltMinChanged( wxCommandEvent& event ) { m_chkTlt->SetValue(true); }
+		void TxtTltMaxChanged( wxCommandEvent& event ) { m_chkTlt->SetValue(true); }
+		void TxtSgMinChanged ( wxCommandEvent& event ) { m_chkSg ->SetValue(true); }
+		void TxtSgMaxChanged ( wxCommandEvent& event ) { m_chkSg ->SetValue(true); }
+
+		//@brief: clear the current acclerating voltage filter
+		void clearKv();
+
+		//@brief: clear the current tilt filter
+		void clearTlt();
+
+		//@brief: clear the current space group filter
+		void clearSg();
+
+		//@brief: clear the current elements filter
+		void clearEl();
 
 	public:
 		//@brief    : set filter bounds
 		//@param kv : upper and lower bounds for kv filtering
 		//@param tlt: upper and lower bounds for tilt filtering
 		//@param el : bitmask of elements
+		//@param ext: is element bitmask exact or inclusive
 		//@param sg : upper and lower bounds for space group filtering
-		void setBounds(std::pair<float, float> kv, std::pair<float, float> tlt, ElementMask el, std::pair<int  , int  > sg);
+		void setBounds(std::pair<float, float> kv, std::pair<float, float> tlt, ElementMask el, bool ext, std::pair<int  , int  > sg);
 
 		//@brief    : get filter bounds
 		//@param kv : location to write upper and lower bounds for kv filtering
 		//@param tlt: location to write upper and lower bounds for tilt filtering
 		//@param el : location to write bitmask of elements
+		//@param ext: is element bitmask exact or inclusive
 		//@param sg : location to write upper and lower bounds for space group filtering
-		void getBounds(std::pair<float, float>& kv, std::pair<float, float>& tlt, ElementMask& el, std::pair<int  , int  >& sg) const;
+		void getBounds(std::pair<float, float>& kv, std::pair<float, float>& tlt, ElementMask& el, bool& ext, std::pair<int  , int  >& sg) const;
 
 		MasterFileFilterPanel( wxWindow* parent, wxWindowID id = wxID_ANY, const wxPoint& pos = wxDefaultPosition, const wxSize& size = wxSize( 695,300 ), long style = wxTAB_TRAVERSAL, const wxString& name = wxEmptyString );
 		~MasterFileFilterPanel();
@@ -104,12 +138,41 @@ class MasterFileFilterPanel : public wxPanel
 
 ///////////////////////////////////////////////////////////////////////////
 
+//@brief: clear the current acclerating voltage filter
+void MasterFileFilterPanel::clearKv() {
+	m_chkKv ->SetValue(false);
+	m_kvMin->ChangeValue( "0.0");
+	m_kvMax->ChangeValue("50.0");
+}
+
+//@brief: clear the current tilt filter
+void MasterFileFilterPanel::clearTlt() {
+	m_chkTlt->SetValue(false);
+	m_tltMin->ChangeValue( "0.0");
+	m_tltMax->ChangeValue("90.0");
+}
+
+//@brief: clear the current space group filter
+void MasterFileFilterPanel::clearSg() {
+	m_chkSg ->SetValue(false);
+	m_sgMin ->ChangeValue(  "1");
+	m_sgMax ->ChangeValue("230");
+	m_laue  ->SetSelection(wxNOT_FOUND);
+}
+
+//@brief: clear the current elements filter
+void MasterFileFilterPanel::clearEl() {
+	m_chkEl ->SetValue(false);
+	m_prdTbl->setMask(ElementMask());
+}
+
 //@brief    : set filter bounds
 //@param kv : upper and lower bounds for kv filtering
 //@param tlt: upper and lower bounds for tilt filtering
 //@param el : bitmask of elements
+//@param ext: is element bitmask exact or inclusive
 //@param sg : upper and lower bounds for space group filtering
-void MasterFileFilterPanel::setBounds(std::pair<float, float> kv, std::pair<float, float> tlt, ElementMask el, std::pair<int  , int  > sg) {
+void MasterFileFilterPanel::setBounds(std::pair<float, float> kv, std::pair<float, float> tlt, ElementMask el, bool ext, std::pair<int  , int  > sg) {
 	if(kv .first == kv .first) {//not nan
 		m_chkKv ->SetValue(true);
 		m_kvMin ->Clear(); m_kvMin ->operator<<(kv .first );
@@ -141,15 +204,18 @@ void MasterFileFilterPanel::setBounds(std::pair<float, float> kv, std::pair<floa
 		if(207 == sg.first &&  230 == sg.second) m_laue->SetSelection(10);
 	}
 
+	m_chkEl->SetValue(ElementMask() != el);
 	m_prdTbl->setMask(el);
+	m_btnExt->SetValue(ext);
 }
 
 //@brief    : get filter bounds
 //@param kv : location to write upper and lower bounds for kv filtering
 //@param tlt: location to write upper and lower bounds for tilt filtering
 //@param el : location to write bitmask of elements
+//@param ext: is element bitmask exact or inclusive
 //@param sg : location to write upper and lower bounds for space group filtering
-void MasterFileFilterPanel::getBounds(std::pair<float, float>& kv, std::pair<float, float>& tlt, ElementMask& el, std::pair<int  , int  >& sg) const {
+void MasterFileFilterPanel::getBounds(std::pair<float, float>& kv, std::pair<float, float>& tlt, ElementMask& el, bool& ext, std::pair<int  , int  >& sg) const {
 	if(m_chkKv ->GetValue()) {
 		double vMin, vMax;
 		m_kvMin ->GetLineText(0).ToDouble(&vMin);
@@ -181,6 +247,7 @@ void MasterFileFilterPanel::getBounds(std::pair<float, float>& kv, std::pair<flo
 	}
 
 	el = m_prdTbl->getMask();
+	ext = m_btnExt->GetValue();
 }
 
 void MasterFileFilterPanel::ChoiceChanged( wxCommandEvent& event ) {
@@ -208,9 +275,9 @@ void MasterFileFilterPanel::ChoiceChanged( wxCommandEvent& event ) {
 MasterFileFilterPanel::MasterFileFilterPanel( wxWindow* parent, wxWindowID id, const wxPoint& pos, const wxSize& size, long style, const wxString& name ) : wxPanel( parent, id, pos, size, style, name ) {
 	//build sizers
 	wxBoxSizer     * bSizer  = new wxBoxSizer( wxVERTICAL );
-	wxFlexGridSizer* fgSizer = new wxFlexGridSizer( 3, 5, 0, 0 );
+	wxFlexGridSizer* fgSizer = new wxFlexGridSizer( 4, 5, 0, 0 );
 	fgSizer->AddGrowableCol( 0 ); fgSizer->AddGrowableCol( 1 ); fgSizer->AddGrowableCol( 2 ); fgSizer->AddGrowableCol( 3 ); fgSizer->AddGrowableCol( 4 );
-	fgSizer->AddGrowableRow( 0 ); fgSizer->AddGrowableRow( 1 ); fgSizer->AddGrowableRow( 2 );
+	fgSizer->AddGrowableRow( 0 ); fgSizer->AddGrowableRow( 1 ); fgSizer->AddGrowableRow( 2 ); fgSizer->AddGrowableRow( 3 );
 	fgSizer->SetFlexibleDirection( wxHORIZONTAL );
 	fgSizer->SetNonFlexibleGrowMode( wxFLEX_GROWMODE_SPECIFIED );
 
@@ -252,6 +319,9 @@ MasterFileFilterPanel::MasterFileFilterPanel( wxWindow* parent, wxWindowID id, c
 	m_laue   = new wxChoice          ( this, wxID_ANY,                     wxDefaultPosition, wxDefaultSize, 11, choices, 0  );
 	m_prdTbl = new PeriodicTablePanel( this, wxID_ANY,                     wxDefaultPosition, wxDefaultSize, wxTAB_TRAVERSAL );
 	m_laue->SetSelection( -1 );
+	m_chkEl  = new wxCheckBox        ( this, wxID_ANY, wxT("Elements"   ), wxDefaultPosition, wxDefaultSize, 0               );
+	m_btnExt = new wxToggleButton    ( this, wxID_ANY, wxT("Exact Match"), wxDefaultPosition, wxDefaultSize, 0               );
+	m_btnClr = new wxButton          ( this, wxID_ANY, wxT("Clear"      ), wxDefaultPosition, wxDefaultSize, 0               );
 
 	//assemble grid
 	fgSizer->Add( m_chkKv , 0, wxALL|wxALIGN_CENTER_VERTICAL                          , 5 );
@@ -272,6 +342,12 @@ MasterFileFilterPanel::MasterFileFilterPanel( wxWindow* parent, wxWindowID id, c
 	fgSizer->Add( m_sgMax , 0, wxALL|wxALIGN_CENTER_VERTICAL|wxALIGN_CENTER_HORIZONTAL, 5 );
 	fgSizer->Add( m_laue  , 0, wxALL, 5 );
 
+	fgSizer->Add( m_chkEl , 0, wxALL|wxALIGN_CENTER_VERTICAL                          , 5 );
+	fgSizer->Add( m_btnExt, 0, wxALL|wxALIGN_CENTER_VERTICAL|wxALIGN_CENTER_HORIZONTAL, 5 );
+	fgSizer->AddStretchSpacer();
+	fgSizer->Add( m_btnClr, 0, wxALL|wxALIGN_CENTER_VERTICAL|wxALIGN_CENTER_HORIZONTAL, 5 );
+	fgSizer->AddStretchSpacer();
+
 	//final assembly of parts
 	bSizer->Add( fgSizer, 0, wxALIGN_CENTER_HORIZONTAL, 5 );
 	// bSizer->Add( m_prdTbl, 1, wxSHAPED|wxALIGN_CENTER_HORIZONTAL|wxALIGN_CENTER_HORIZONTAL );
@@ -281,10 +357,35 @@ MasterFileFilterPanel::MasterFileFilterPanel( wxWindow* parent, wxWindowID id, c
 	this->Layout();
 
 	m_laue->Connect( wxEVT_COMMAND_CHOICE_SELECTED, wxCommandEventHandler( MasterFileFilterPanel::ChoiceChanged ), NULL, this );
+	m_chkKv ->Connect( wxEVT_CHECKBOX              , wxCommandEventHandler( MasterFileFilterPanel::ChkKvChanged     ), NULL, this );
+	m_chkTlt->Connect( wxEVT_CHECKBOX              , wxCommandEventHandler( MasterFileFilterPanel::ChkTltChanged    ), NULL, this );
+	m_chkSg ->Connect( wxEVT_CHECKBOX              , wxCommandEventHandler( MasterFileFilterPanel::ChkSgChanged     ), NULL, this );
+	m_chkEl ->Connect( wxEVT_CHECKBOX              , wxCommandEventHandler( MasterFileFilterPanel::ChkElChanged     ), NULL, this );
+	m_kvMin ->Connect( wxEVT_COMMAND_TEXT_UPDATED  , wxCommandEventHandler( MasterFileFilterPanel::TxtKvMinChanged  ), NULL, this );
+	m_kvMax ->Connect( wxEVT_COMMAND_TEXT_UPDATED  , wxCommandEventHandler( MasterFileFilterPanel::TxtKvMaxChanged  ), NULL, this );
+	m_tltMin->Connect( wxEVT_COMMAND_TEXT_UPDATED  , wxCommandEventHandler( MasterFileFilterPanel::TxtTltMinChanged ), NULL, this );
+	m_tltMax->Connect( wxEVT_COMMAND_TEXT_UPDATED  , wxCommandEventHandler( MasterFileFilterPanel::TxtTltMaxChanged ), NULL, this );
+	m_sgMin ->Connect( wxEVT_COMMAND_TEXT_UPDATED  , wxCommandEventHandler( MasterFileFilterPanel::TxtSgMinChanged  ), NULL, this );
+	m_sgMax ->Connect( wxEVT_COMMAND_TEXT_UPDATED  , wxCommandEventHandler( MasterFileFilterPanel::TxtSgMaxChanged  ), NULL, this );
+	m_btnClr->Connect( wxEVT_COMMAND_BUTTON_CLICKED, wxCommandEventHandler( MasterFileFilterPanel::ClearPressed     ), NULL, this );
+	m_prdTbl->connectToggleEvent(wxCommandEventHandler( MasterFileFilterPanel::ElementsChanged ),  this);
+
 }
 
 MasterFileFilterPanel::~MasterFileFilterPanel() {
 	m_laue->Disconnect( wxEVT_COMMAND_CHOICE_SELECTED, wxCommandEventHandler( MasterFileFilterPanel::ChoiceChanged ), NULL, this );
+	m_chkKv ->Disconnect( wxEVT_CHECKBOX              , wxCommandEventHandler( MasterFileFilterPanel::ChkKvChanged     ), NULL, this );
+	m_chkTlt->Disconnect( wxEVT_CHECKBOX              , wxCommandEventHandler( MasterFileFilterPanel::ChkTltChanged    ), NULL, this );
+	m_chkSg ->Disconnect( wxEVT_CHECKBOX              , wxCommandEventHandler( MasterFileFilterPanel::ChkSgChanged     ), NULL, this );
+	m_chkEl ->Disconnect( wxEVT_CHECKBOX              , wxCommandEventHandler( MasterFileFilterPanel::ChkElChanged     ), NULL, this );
+	m_kvMin ->Disconnect( wxEVT_COMMAND_TEXT_UPDATED  , wxCommandEventHandler( MasterFileFilterPanel::TxtKvMinChanged  ), NULL, this );
+	m_kvMax ->Disconnect( wxEVT_COMMAND_TEXT_UPDATED  , wxCommandEventHandler( MasterFileFilterPanel::TxtKvMaxChanged  ), NULL, this );
+	m_tltMin->Disconnect( wxEVT_COMMAND_TEXT_UPDATED  , wxCommandEventHandler( MasterFileFilterPanel::TxtTltMinChanged ), NULL, this );
+	m_tltMax->Disconnect( wxEVT_COMMAND_TEXT_UPDATED  , wxCommandEventHandler( MasterFileFilterPanel::TxtTltMaxChanged ), NULL, this );
+	m_sgMin ->Disconnect( wxEVT_COMMAND_TEXT_UPDATED  , wxCommandEventHandler( MasterFileFilterPanel::TxtSgMinChanged  ), NULL, this );
+	m_sgMax ->Disconnect( wxEVT_COMMAND_TEXT_UPDATED  , wxCommandEventHandler( MasterFileFilterPanel::TxtSgMaxChanged  ), NULL, this );
+	m_btnClr->Disconnect( wxEVT_COMMAND_BUTTON_CLICKED, wxCommandEventHandler( MasterFileFilterPanel::ClearPressed     ), NULL, this );
+	m_prdTbl->disconnectToggleEvent(wxCommandEventHandler( MasterFileFilterPanel::ElementsChanged ),  this);
 }
 
 #endif//_MP_FILT_PAN_H_

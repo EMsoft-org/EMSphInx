@@ -111,12 +111,13 @@ struct MasterFile {
 	//@brief     : set the filter flag using bounds
 	//@param fKv : upper and lower bounds for kv filtering
 	//@param fTlt: upper and lower bounds for tilt filtering
-	//@param fEl : bitmask of ~TODO should all or any elements be required?
+	//@param fEl : bitmask of elements
+	//@param fEx : should elements be exact (true) or subset (false)
 	//@param fSg : upper and lower bounds for space group filtering
-	void filter(std::pair<float, float> fKv, std::pair<float, float> fTlt, ElementMask fEl, std::pair<int  , int  > fSg) {
+	void filter(std::pair<float, float> fKv, std::pair<float, float> fTlt, ElementMask fEl, bool fEx, std::pair<int  , int  > fSg) {
 		flg.set(2, kv  >= fKv .first && kv  <= fKv .second &&
 		           tlt >= fTlt.first && tlt <= fTlt.second && 
-		           (fEl.none() ? true : (fEl & els) == fEl)&&
+		           (fEl.none() ? true : ( fEx ? fEl == els : (fEl & els) == fEl ) ) &&
 		           sg  >= fSg .first && sg  <= fSg .second);
 	}
 
@@ -153,6 +154,7 @@ class MasterFileList: public wxListCtrl{
 	std::pair<float, float> m_kvFilt   ;//kv filtering range
 	std::pair<float, float> m_tltFilt  ;//tilt filtering range
 	ElementMask             m_elFlt    ;//element filtering
+	bool                    m_elExt    ;//element filtering type
 	std::pair<int  , int  > m_sgFilt   ;//space group filtering
 
 	wxString                m_strSrch  ;//current search string
@@ -181,15 +183,17 @@ class MasterFileList: public wxListCtrl{
 		//@param kv : upper and lower bounds for kv filtering
 		//@param tlt: upper and lower bounds for tilt filtering
 		//@param el : bitmask of ~TODO should all or any elements be required?
+		//@param ext: is element bitmask exact or inclusive
 		//@param sg : upper and lower bounds for space group filtering
-		void setFilters(std::pair<float, float> kv = AllKv(), std::pair<float, float> tlt = AllTlt(), ElementMask el = AllEl(), std::pair<int  , int  > sg = AllSg());
+		void setFilters(std::pair<float, float> kv = AllKv(), std::pair<float, float> tlt = AllTlt(), ElementMask el = AllEl(), bool ext = false, std::pair<int  , int  > sg = AllSg());
 
 		//@brief    : get filter bounds
 		//@param kv : location to write upper and lower bounds for kv filtering
 		//@param tlt: location to write upper and lower bounds for tilt filtering
 		//@param el : location to write bitmask of ~TODO should all or any elements be required?
+		//@param ext: is element bitmask exact or inclusive
 		//@param sg : location to write upper and lower bounds for space group filtering
-		void getFilters(std::pair<float, float>& kv, std::pair<float, float>& tlt, ElementMask& el, std::pair<int  , int  >& sg) const;
+		void getFilters(std::pair<float, float>& kv, std::pair<float, float>& tlt, ElementMask& el, bool& ext, std::pair<int  , int  >& sg) const;
 
 		//@brief    : set the string search term
 		//@param str: new search term
@@ -298,16 +302,23 @@ void MasterFileList::setSort(MasterFile::CompFunc func) {
 	}
 }
 
-void MasterFileList::setFilters(std::pair<float, float> kv, std::pair<float, float> tlt, ElementMask el, std::pair<int  , int  > sg) {
-	if(kv != m_kvFilt || tlt != m_tltFilt || el != m_elFlt || sg != m_sgFilt ) {//filters actually changed
+//@brief    : set filter bounds
+//@param kv : upper and lower bounds for kv filtering
+//@param tlt: upper and lower bounds for tilt filtering
+//@param el : bitmask of
+//@param ext: is element bitmask exact or inclusive
+//@param sg : upper and lower bounds for space group filtering
+void MasterFileList::setFilters(std::pair<float, float> kv, std::pair<float, float> tlt, ElementMask el, bool ext, std::pair<int  , int  > sg) {
+	if(kv != m_kvFilt || tlt != m_tltFilt || el != m_elFlt || ext != m_elExt || sg != m_sgFilt ) {//filters actually changed
 		//save filters and clear filtered list
 		m_kvFilt  = kv ;
 		m_tltFilt = tlt;
 		m_elFlt   = el ;
+		m_elExt   = ext;
 		m_sgFilt  = sg ;
 
 		//loop over all files applying new filters
-		for(std::vector<MasterFile>::iterator iter = m_allFiles.begin(); iter != m_allFiles.end(); ++iter) iter->filter(m_kvFilt, m_tltFilt, m_elFlt, m_sgFilt);
+		for(std::vector<MasterFile>::iterator iter = m_allFiles.begin(); iter != m_allFiles.end(); ++iter) iter->filter(m_kvFilt, m_tltFilt, m_elFlt, m_elExt, m_sgFilt);
 		populateDis();
 	}
 }
@@ -315,12 +326,14 @@ void MasterFileList::setFilters(std::pair<float, float> kv, std::pair<float, flo
 //@brief    : get filter bounds
 //@param kv : location to write upper and lower bounds for kv filtering
 //@param tlt: location to write upper and lower bounds for tilt filtering
-//@param el : location to write bitmask of ~TODO should all or any elements be required?
+//@param el : location to write bitmask of
+//@param ext: is element bitmask exact or inclusive
 //@param sg : location to write upper and lower bounds for space group filtering
-void MasterFileList::getFilters(std::pair<float, float>& kv, std::pair<float, float>& tlt, ElementMask& el, std::pair<int  , int  >& sg) const {
+void MasterFileList::getFilters(std::pair<float, float>& kv, std::pair<float, float>& tlt, ElementMask& el, bool& ext, std::pair<int  , int  >& sg) const {
 	kv  = m_kvFilt ;
 	tlt = m_tltFilt;
 	el  = m_elFlt  ;
+	ext = m_elExt  ;
 	sg  = m_sgFilt ;
 }
 
@@ -345,7 +358,7 @@ bool MasterFileList::AddItem(MasterFile item, bool chk) {
 	if(!(item.isRead() ? true : item.read())) return false;
 	if(std::find(m_allFiles.cbegin(), m_allFiles.cend(), item) == m_allFiles.cend()) {
 		//compute item filtering and add to list
-		item.filter(m_kvFilt, m_tltFilt, m_elFlt, m_sgFilt);
+		item.filter(m_kvFilt, m_tltFilt, m_elFlt, m_elExt, m_sgFilt);
 		item.search(m_strSrch);
 		item.check(chk);
 

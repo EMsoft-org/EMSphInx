@@ -73,6 +73,12 @@ class PeriodicTablePanel : public wxPanel {
 		PeriodicTablePanel( wxWindow* parent, wxWindowID id = wxID_ANY, const wxPoint& pos = wxDefaultPosition, const wxSize& size = wxDefaultSize, long style = wxTAB_TRAVERSAL, const wxString& name = wxEmptyString );
 		~PeriodicTablePanel();
 
+		//@brief: (dis)connect an event to all of the toggle buttons
+		//@param fnc: event handler to connect
+		//@param hnd: event sink to connect
+		//@note     : you are responsible for calling disconnectToggleEvent before destruction
+		void    connectToggleEvent(wxObjectEventFunction fnc, wxEvtHandler* hnd) {for(wxToggleButton* btn : m_btns) btn->Connect   (wxEVT_TOGGLEBUTTON, fnc, NULL, hnd);}
+		void disconnectToggleEvent(wxObjectEventFunction fnc, wxEvtHandler* hnd) {for(wxToggleButton* btn : m_btns) btn->Disconnect(wxEVT_TOGGLEBUTTON, fnc, NULL, hnd);}
 };
 
 ///////////////////////////////////////////////////////////////////////////

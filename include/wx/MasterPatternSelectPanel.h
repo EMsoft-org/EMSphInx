@@ -133,16 +133,17 @@ void MasterPatternSelectPanel::FltClicked( wxCommandEvent& event ) {
 	std::pair<float, float> kv, tlt;
 	std::pair<int, int> sg;
 	ElementMask el;
-	m_libLst->getFilters(kv, tlt, el, sg);
+	bool ext;
+	m_libLst->getFilters(kv, tlt, el, ext, sg);
 	if(MasterFileList::AllKv () == kv ) {kv .first = kv .second = NAN;}
 	if(MasterFileList::AllTlt() == tlt) {tlt.first = tlt.second = NAN;}
 	SinglePanelDialog<MasterFileFilterPanel> dlg(this, wxID_ANY, "Select Filters");
-	dlg.getPanel()->setBounds(kv, tlt, el, sg);
+	dlg.getPanel()->setBounds(kv, tlt, el, ext, sg);
 	if(wxID_OK == dlg.ShowModal()) {
-		dlg.getPanel()->getBounds(kv, tlt, el, sg);
+		dlg.getPanel()->getBounds(kv, tlt, el, ext, sg);
 		if(kv .first != kv .first) kv  = MasterFileList::AllKv ();
 		if(tlt.first != tlt.first) tlt = MasterFileList::AllTlt();
-		m_libLst->setFilters(kv, tlt, el, sg);
+		m_libLst->setFilters(kv, tlt, el, ext, sg);
 	}
 } 
 
