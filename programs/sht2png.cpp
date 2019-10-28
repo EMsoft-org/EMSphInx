@@ -68,11 +68,10 @@ int main(int argc, char *argv[]) {
 	try {
 		//sanity check argument count
 		//this should be adjusted in the future to allow batch conversion since there is a good amount of overhead in building the transformer
-		if(4 != argc) {
-			std::cout << "usage: " << argv[0] << " inputFile nhFile shFile\n";
-			std::cout << "\tinputFile - spherical hamrnoics file to write (*.Sht)\n";
-			std::cout << "\tnhFile    - location to write north hemisphere image (*.png)\n";
-			std::cout << "\tshFile    - location to write south hemisphere image (*.png)\n";
+		if(3 != argc) {
+			std::cout << "usage: " << argv[0] << " inputFile outputFile\n";
+			std::cout << "\tinputFile  - spherical harmonics file to read (*.sht)\n";
+			std::cout << "\toutputFile - location to write square legendre (*.png)\n";
 			return EXIT_FAILURE;
 		}
 
@@ -96,9 +95,15 @@ int main(int argc, char *argv[]) {
 		std::vector<uint8_t> sph8(sph.size());
 		std::transform(sph.begin(), sph.end(), sph8.begin(), [fact, vMin](const double& v) {return (uint8_t)std::round((v - vMin) * fact);});
 
+		//repack side by side
+		std::vector<uint8_t> hconcat(sph8.size());
+		for(size_t r = 0; r < dim; r++) {//loop over rows of image
+			std::copy(sph8.begin()             + r * dim, sph8.begin()             + (r+1) * dim, hconcat.begin() + r * dim * 2       );
+			std::copy(sph8.begin() + dim * dim + r * dim, sph8.begin() + dim * dim + (r+1) * dim, hconcat.begin() + r * dim * 2 + dim );
+		}
+
 		//write outputs
-		writePng(sph8.data()            , dim, dim, 1, argv[2]);
-		writePng(sph8.data() + dim * dim, dim, dim, 1, argv[3]);
+		writePng(hconcat.data(), dim * 2, dim, 1, argv[2]);
 
 		//now read in the raw SHT file and print header information
 		sht::File file;
