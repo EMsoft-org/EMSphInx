@@ -38,6 +38,7 @@
 
 #include "idx/master.hpp"
 #include "sht_file.hpp"
+#include "util/image.hpp"//bilinear interpolation
 
 #define MINIZ_NO_STDIO
 #define MINIZ_NO_TIME
@@ -68,10 +69,11 @@ int main(int argc, char *argv[]) {
 	try {
 		//sanity check argument count
 		//this should be adjusted in the future to allow batch conversion since there is a good amount of overhead in building the transformer
-		if(3 != argc) {
-			std::cout << "usage: " << argv[0] << " inputFile outputFile\n";
-			std::cout << "\tinputFile  - spherical harmonics file to read (*.sht)\n";
-			std::cout << "\toutputFile - location to write square legendre (*.png)\n";
+		if(!(3 == argc || 4 == argc)) {
+			std::cout << "usage: " << argv[0] << " inputFile sqLegOut [sterOut]\n";
+			std::cout << "\tinputFile - spherical harmonics file to read (*.sht)\n";
+			std::cout << "\tsqLegOut  - location to write square legendre image (*.png)\n";
+			std::cout << "\tsterOut   - optional location to write stereographic image (*.png)\n";
 			return EXIT_FAILURE;
 		}
 
@@ -83,27 +85,95 @@ int main(int argc, char *argv[]) {
 
 		//build spherical harmonic transformer and reconstruct on square legendre grid
 		const size_t dim = spec.getBw() + (spec.getBw() % 2 == 0 ? 3 : 2);
+		emsphinx::MasterPattern<double> sqMp(dim);
+		sqMp.lyt = emsphinx::square::Layout::Legendre;
 		emsphinx::square::DiscreteSHT<double> sht(dim, spec.getBw(), emsphinx::square::Layout::Legendre);
-		std::vector<double> sph(dim * dim * 2, 0.0);
-		sht.synthesize(spec.data(), sph.data(), sph.data() + dim * dim);
+		sht.synthesize(spec.data(), sqMp.nh.data(), sqMp.sh.data());//now we have a real space square legendre master pattern
 
 		//convert from doubles to 8 bit
-		std::pair<double*, double*> minMax = std::minmax_element(sph.data(), sph.data() + sph.size());
-		const double vMin = *minMax.first;
-		const double delt = *minMax.second - vMin;
-		const double fact = 255.0 / delt;
-		std::vector<uint8_t> sph8(sph.size());
-		std::transform(sph.begin(), sph.end(), sph8.begin(), [fact, vMin](const double& v) {return (uint8_t)std::round((v - vMin) * fact);});
+		std::pair<double*, double*> minMaxNh = std::minmax_element(sqMp.nh.data(), sqMp.nh.data() + sqMp.nh.size());
+		std::pair<double*, double*> minMaxSh = std::minmax_element(sqMp.sh.data(), sqMp.sh.data() + sqMp.sh.size());
+		double vMin = std::min(*minMaxNh.first , *minMaxNh.first );
+		double delt = std::max(*minMaxNh.second, *minMaxNh.second) - vMin;
+		double fact = 255.0 / delt;
+		std::vector<uint8_t> nh8(dim * dim), sh8(dim * dim);
+		std::transform(sqMp.nh.begin(), sqMp.nh.end(), nh8.begin(), [fact, vMin](const double& v) {return (uint8_t)std::round((v - vMin) * fact);});
+		std::transform(sqMp.sh.begin(), sqMp.sh.end(), sh8.begin(), [fact, vMin](const double& v) {return (uint8_t)std::round((v - vMin) * fact);});
 
 		//repack side by side
-		std::vector<uint8_t> hconcat(sph8.size());
+		std::vector<uint8_t> hconcat(dim * dim * 2);
 		for(size_t r = 0; r < dim; r++) {//loop over rows of image
-			std::copy(sph8.begin()             + r * dim, sph8.begin()             + (r+1) * dim, hconcat.begin() + r * dim * 2       );
-			std::copy(sph8.begin() + dim * dim + r * dim, sph8.begin() + dim * dim + (r+1) * dim, hconcat.begin() + r * dim * 2 + dim );
+			std::copy(nh8.begin() + r * dim, nh8.begin() + (r+1) * dim, hconcat.begin() + r * dim * 2       );
+			std::copy(sh8.begin() + r * dim, sh8.begin() + (r+1) * dim, hconcat.begin() + r * dim * 2 + dim );
 		}
+		writePng(hconcat.data(), dim * 2, dim, 1, argv[2]);//write square legendre image
 
-		//write outputs
-		writePng(hconcat.data(), dim * 2, dim, 1, argv[2]);
+		//reinterpolate square lambert master pattern
+		//we could synthesize directly onto the lambert grid but this is a little easier with existing code
+		//since we'll reinterpolate for the stereographic projection anyway it probably doesn't matter that much
+		//especially since the stereographic image most likely is only for qualitative evaluation
+		const bool stereo = 4 == argc;
+		if(stereo) {
+			//build double precision stereographic projection
+			sqMp.toLambert();//legendre -> lambert
+			image::BiPix<double> pix;
+			std::vector<double> stNh(dim * dim, NAN), stSh(dim * dim, NAN);//space for stereographic projections
+			for(size_t j = 0; j < dim; j++) {
+				const double Y = -((double(j) / (dim - 1)) * 2 - 1);//[-1,1], negate for image convention
+				for(size_t i = 0; i < dim; i++) {
+					const double X = (double(i) / (dim - 1)) * 2 - 1;//[-1,1]
+					
+					//get stereographic grid point
+					const double h2 = X * X + Y * Y;//radius of (X,Y)^2
+					if(h2 > 1.0) continue;//outside of circle
+					const double den = h2 + 1.0;
+					double n[3] = {//direction of this stereographic projection grid point (north hemisphere)
+						 2.0 * X   / den,
+						 2.0 * Y   / den,
+						(1.0 - h2) / den
+					};
+
+					//interpolate from lambert grid
+					double ix, iy;
+					emsphinx::square::lambert::sphereToSquare(n[0], n[1], n[2], ix, iy);//square lambert project
+					pix.bilinearCoeff(ix, iy, dim, dim);//compute bilinear interpolation in square lambert image
+					stNh[j * dim + i] = pix.interpolate(sqMp.nh.data());
+					stSh[j * dim + i] = pix.interpolate(sqMp.sh.data());
+				}
+			}
+
+			//convert to 8 bit w/ alpha channel
+			minMaxNh = std::minmax_element(sqMp.nh.data(), sqMp.nh.data() + sqMp.nh.size());
+			minMaxSh = std::minmax_element(sqMp.sh.data(), sqMp.sh.data() + sqMp.sh.size());
+			vMin = std::min(*minMaxNh.first , *minMaxNh.first );
+			delt = std::max(*minMaxNh.second, *minMaxNh.second) - vMin;
+			fact = 255.0 / delt;
+			nh8.resize(dim * dim * 2);
+			sh8.resize(dim * dim * 2);
+			std::fill(nh8.begin(), nh8.end(), 0x00);
+			std::fill(sh8.begin(), sh8.end(), 0x00);
+			for(size_t j = 0; j < dim; j++) {
+				for(size_t i = 0; i < dim; i++) {
+					const size_t idx = j * dim + i;
+					if(!std::isnan(stNh[idx])) {
+						nh8[2*idx+0] = (uint8_t)std::round((stNh[idx] - vMin) * fact);
+						nh8[2*idx+1] = 0xFF;//alpha
+					}
+					if(!std::isnan(stSh[idx])) {
+						sh8[2*idx+0] = (uint8_t)std::round((stSh[idx] - vMin) * fact);
+						sh8[2*idx+1] = 0xFF;//alpha
+					}
+				}
+			}
+
+			//horizontal concatenta
+			hconcat.resize(dim * dim * 4);
+			for(size_t r = 0; r < dim; r++) {//loop over rows of image
+				std::copy(nh8.begin() + r * dim * 2, nh8.begin() + (r+1) * dim * 2, hconcat.begin() + r * dim * 4           );
+				std::copy(sh8.begin() + r * dim * 2, sh8.begin() + (r+1) * dim * 2, hconcat.begin() + r * dim * 4 + dim * 2 );
+			}
+			writePng(hconcat.data(), dim * 2, dim, 2, argv[3]);//write square legendre image
+		}
 
 		//now read in the raw SHT file and print header information
 		sht::File file;
