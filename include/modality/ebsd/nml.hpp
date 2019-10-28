@@ -150,6 +150,10 @@ namespace emsphinx {
 
 			//@brief: create the output data file and write header data to it
 			void writeFileHeader() const;
+
+			//@brief: sanity check some basic values
+			//@note : throws an exception if check fails
+			void sanityCheck() const;
 		};
 
 	}//ebsd
@@ -232,8 +236,11 @@ namespace emsphinx {
 			try {     pSymFile    =         nml.getString ("psymfile"  );} catch (...) {pSymFile.clear();}//if pSymFile isn't found no operators will be checked
 			          masterFiles =         nml.getStrings("masterfile");
 			          patFile     = ipath + nml.getString("patfile"   );
-			const bool h5Pat = H5::H5File::isHdf5(patFile);
-			if(h5Pat) patName     =         nml.getString("patdset"   );
+			try {
+				if(H5::H5File::isHdf5(patFile)) patName = nml.getString("patdset");
+			} catch (H5::Exception&) {//HDF5 library throws if patFile is ""
+					//do nothing (we don't need patdset)
+			}
 			if(!pSymFile.empty()) patFile = ipath + patFile;
 			for(std::string& str : masterFiles) str = ipath + str;
 
@@ -299,6 +306,7 @@ namespace emsphinx {
 			try {qualName   = nml.getString("qualmap"   );} catch (...) {qualName  .clear();}//if qualName   isn't found we won't make a  quality map
 
 			//check for unused inputs
+			sanityCheck();
 			if(!nml.fullyParsed()) return nml.unusedTokens();
 			return "";
 		}
@@ -587,6 +595,28 @@ namespace emsphinx {
 			header.createDataSet("UserName"   , H5::StrType(0, H5T_VARIABLE), H5::DataSpace(H5S_SCALAR)).write(userName   , H5::StrType(0, H5T_VARIABLE));
 			header.createDataSet("ProgramName", H5::StrType(0, H5T_VARIABLE), H5::DataSpace(H5S_SCALAR)).write(programName, H5::StrType(0, H5T_VARIABLE));
 			header.createDataSet("Version"    , H5::StrType(0, H5T_VARIABLE), H5::DataSpace(H5S_SCALAR)).write(version    , H5::StrType(0, H5T_VARIABLE));
+		}
+
+		//@brief: sanity check some basic values
+		//@note : throws an exception if check fails
+		void Namelist::sanityCheck() const {
+			if(patFile.empty()) throw std::runtime_error("missing input pattern file");
+			if(masterFiles.empty()) throw std::runtime_error("no master pattern files");
+			for(const std::string& str : masterFiles) {
+				if(str.empty()) throw std::runtime_error("empty master pattern file name");
+			}
+			if(patDims[0] < 2 || patDims[0] > 16384 || 
+			   patDims[1] < 2 || patDims[1] > 16384) throw std::runtime_error("unreasonable pattern dimension (outside [2, 16384] pix)");
+			if(circRad < -1) throw std::runtime_error("circular mask radius must be >= -1");
+			if(nRegions < 0 || nRegions > std::min(patDims[0], patDims[1])) throw std::runtime_error("unreasonable AHE nregions");
+			const double detW = delta * patDims[0] / 1000;//this is the width of the detector in mm (should be ~30)
+			if(detW < 5 || detW > 90) throw std::runtime_error("unreasonable EBSD detector width (should be [5, 90] mm)");
+			if(thetac < -60 || thetac > 60) throw std::runtime_error("unreasonable camera tilt (should be [-60, 60] degrees)");
+			if(scanDims[0] < 1 || scanDims[1] < 1) throw std::runtime_error("non-positive scan dimensions");
+			if(bw < 16 || bw > 512) throw std::runtime_error("unreasonable bandwidth (should be [16, 512])");
+			if(nThread < 0) throw std::runtime_error("negative thread count");
+			if(batchSize < 0) throw std::runtime_error("negative batch size");
+			if(dataFile.empty()) throw std::runtime_error("missing output data file");
 		}
 
 	}//ebsd

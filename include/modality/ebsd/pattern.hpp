@@ -395,69 +395,80 @@ namespace emsphinx {
 				ptr->flp = true;//EDAX files need to be flipped
 				return std::shared_ptr<PatternFile>(ptr);
 			} else if(0 == ext.compare("h5") || 0 == ext.compare("hdf") || 0 == ext.compare("hdf5")) {
-				//open the dataset and get information
-				H5::H5File file = H5::H5File(name, H5F_ACC_RDONLY);//open the file
-				H5::DataSet dSet = file.openDataSet(aux);//get the dataset we're after
-				hsize_t dims[3];
-				if(3 != dSet.getSpace().getSimpleExtentNdims()) throw std::runtime_error("hdf pattern dataset must be 3D");
-				dSet.getSpace().getSimpleExtentDims(dims);//read extent in each dimension
-				if((0 != px && px != dims[2]) || (0 != py && py != dims[1])) throw std::runtime_error("patterns aren't expected shape");
-
-				//determine if patterns need to be flipped using vendor
-				bool vendorFlip = false;
-				std::string vendor = GetVendor(name);
-				if     ("EDAX"     == vendor) vendorFlip = true ;
-				else if("Oxford"   == vendor) vendorFlip = false;
-				else if("Bruker"   == vendor) vendorFlip = false;
-				else if("DREAM.3D" == vendor) vendorFlip = false;
-				else if("EMsoft"   == vendor) vendorFlip = true;
-				else throw std::runtime_error("unknown EBSD vendor: " + vendor);
-
-				//determine data type
-				Bits bits = ImageSource::Bits::UNK;
-				H5::DataType type = dSet.getDataType();
-				if     (type == H5::DataType(H5::PredType::NATIVE_UINT8 )) bits = ImageSource::Bits::U8 ;
-				else if(type == H5::DataType(H5::PredType::NATIVE_UCHAR )) bits = ImageSource::Bits::U8 ;
-				else if(type == H5::DataType(H5::PredType::NATIVE_UINT16)) bits = ImageSource::Bits::U16;
-				else if(type == H5::DataType(H5::PredType::NATIVE_FLOAT )) bits = ImageSource::Bits::F32;
-				if(ImageSource::Bits::UNK == bits) throw std::runtime_error("only uint8, uint16, and float hdf patterns are supported");
-
-				//get offset from file start
-				haddr_t offset;
 				try {
-					offset = dSet.getOffset();//get the offset to the dataset start
-				} catch(H5::DataSetIException&) {
-					offset = (haddr_t)-1;//HAADR_UNDEF if not contigous (<0)
-				}
+					//open the dataset and get information
+					H5::H5File file = H5::H5File(name, H5F_ACC_RDONLY);//open the file
+					H5::DataSet dSet = file.openDataSet(aux);//get the dataset we're after
+					hsize_t dims[3];
+					if(3 != dSet.getSpace().getSimpleExtentNdims()) throw std::runtime_error("hdf pattern dataset must be 3D");
+					dSet.getSpace().getSimpleExtentDims(dims);//read extent in each dimension
+					if((0 != px && px != dims[2]) || (0 != py && py != dims[1])) throw std::runtime_error("patterns aren't expected shape");
 
-				//try to raw access the dataset
-				H5::DSetCreatPropList props = dSet.getCreatePlist();
-				if(0 == props.getExternalCount()                                               &&   //we can't use a memory map if the dataset references external files
-				   ((H5D_COMPACT == props.getLayout() || H5D_CONTIGUOUS == props.getLayout())) &&   //we can't memory map datasets unless they are contigous in memory
-				   0 != props.getNfilters()                                                    &&   //we can't memory map compressed datasets
-				   offset != (haddr_t)-1                                                         ) {//negative value (HADDR_UNDEF) means that hdf5 couldn't compute the data offset
-					//we can try memory mapping the file
+					//determine if patterns need to be flipped using vendor
+					bool vendorFlip = false;
+					std::string vendor = GetVendor(name);
+					if     ("EDAX"     == vendor) vendorFlip = true ;
+					else if("Oxford"   == vendor) vendorFlip = false;
+					else if("Bruker"   == vendor) vendorFlip = false;
+					else if("DREAM.3D" == vendor) vendorFlip = false;
+					else if("EMsoft"   == vendor) vendorFlip = true;
+					else throw std::runtime_error("unknown EBSD vendor: " + vendor);
+
+					//determine data type
+					Bits bits = ImageSource::Bits::UNK;
+					H5::DataType type = dSet.getDataType();
+					if     (type == H5::DataType(H5::PredType::NATIVE_UINT8 )) bits = ImageSource::Bits::U8 ;
+					else if(type == H5::DataType(H5::PredType::NATIVE_UCHAR )) bits = ImageSource::Bits::U8 ;
+					else if(type == H5::DataType(H5::PredType::NATIVE_UINT16)) bits = ImageSource::Bits::U16;
+					else if(type == H5::DataType(H5::PredType::NATIVE_FLOAT )) bits = ImageSource::Bits::F32;
+					if(ImageSource::Bits::UNK == bits) throw std::runtime_error("only uint8, uint16, and float hdf patterns are supported");
+
+					//get offset from file start
+					haddr_t offset;
 					try {
-						std::shared_ptr<IfStreamedPatternFile> ptr = std::make_shared<IfStreamedPatternFile>(name);//memory map entire file
-						ptr->setShape((size_t)dims[2], (size_t)dims[1], bits);
-						ptr->setOffset(dSet.getOffset());
-						ptr->setNum((size_t)dims[0]);
-						ptr->flp = vendorFlip;
-						return std::shared_ptr<PatternFile>(ptr);
-					} catch (...) {
-						//fall back to normal hdf5 reading if we failed
+						offset = dSet.getOffset();//get the offset to the dataset start
+					} catch(H5::DataSetIException&) {
+						offset = (haddr_t)-1;//HAADR_UNDEF if not contigous (<0)
 					}
-				}
 
-				//if we made it this far we either can't get raw access or failed to do so
-				//just read entire dataset into memory (it may be good to add a ChunkedPatternFile derived option for large files)
-				std::shared_ptr<BufferedPatternFile> ptr = std::make_shared<BufferedPatternFile>();
-				ptr->setShape((size_t)dims[2], (size_t)dims[1], bits);
-				ptr->setNum((size_t)dims[0]);
-				ptr->allocate();
-				dSet.read((void*)ptr->data(), H5::PredType::NATIVE_UINT8);
-				ptr->flp = vendorFlip;
-				return std::shared_ptr<PatternFile>(ptr);
+					//try to raw access the dataset
+					H5::DSetCreatPropList props = dSet.getCreatePlist();
+					if(0 == props.getExternalCount()                                               &&   //we can't use a memory map if the dataset references external files
+					   ((H5D_COMPACT == props.getLayout() || H5D_CONTIGUOUS == props.getLayout())) &&   //we can't memory map datasets unless they are contigous in memory
+					   0 != props.getNfilters()                                                    &&   //we can't memory map compressed datasets
+					   offset != (haddr_t)-1                                                         ) {//negative value (HADDR_UNDEF) means that hdf5 couldn't compute the data offset
+						//we can try memory mapping the file
+						try {
+							std::shared_ptr<IfStreamedPatternFile> ptr = std::make_shared<IfStreamedPatternFile>(name);//memory map entire file
+							ptr->setShape((size_t)dims[2], (size_t)dims[1], bits);
+							ptr->setOffset(dSet.getOffset());
+							ptr->setNum((size_t)dims[0]);
+							ptr->flp = vendorFlip;
+							return std::shared_ptr<PatternFile>(ptr);
+						} catch (...) {
+							//fall back to normal hdf5 reading if we failed
+						}
+					}
+
+					//if we made it this far we either can't get raw access or failed to do so
+					//just read entire dataset into memory (it may be good to add a ChunkedPatternFile derived option for large files)
+					std::shared_ptr<BufferedPatternFile> ptr = std::make_shared<BufferedPatternFile>();
+					ptr->setShape((size_t)dims[2], (size_t)dims[1], bits);
+					ptr->setNum((size_t)dims[0]);
+					ptr->allocate();
+					dSet.read((void*)ptr->data(), H5::PredType::NATIVE_UINT8);
+					ptr->flp = vendorFlip;
+					return std::shared_ptr<PatternFile>(ptr);
+
+				} catch (H5::Exception& e) {//convert hdf5 exceptions into std::exception
+					std::ostringstream ss;
+					ss << "H5 error attempting to read EBSD patterns:\n";
+					ss << "\tfile - " << name << '\n';
+					ss << "\tdset - " << aux  << '\n';
+					ss << "\tfunc - " << e.getCFuncName() << '\n';
+					ss << "detailed message:\n" << e.getCDetailMsg();
+					throw std::runtime_error(ss.str());
+				}
 			} else if(0 == ext.compare("data")) {
 				//raw 32bit float patterns with no header, construct with ifstream
 				std::shared_ptr<IfStreamedPatternFile> ptr = std::make_shared<IfStreamedPatternFile>(name);//memory map entire file
@@ -483,7 +494,7 @@ namespace emsphinx {
 				std::shared_ptr<OxfordPatternFile> ptr = std::make_shared<OxfordPatternFile>(name);
 				return ptr;
 			}
-			throw std::runtime_error("couldn't find reader for '" + name + "'");
+			throw std::runtime_error("couldn't find EBSD pattern reader for '" + name + "'");
 		}
 
 		std::vector<std::string> PatternFile::SearchH5(const std::string name) {

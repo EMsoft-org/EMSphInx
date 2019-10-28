@@ -42,6 +42,7 @@
 #include <wx/frame.h>
 #include <wx/splitter.h>
 #include <wx/progdlg.h>
+#include <wx/msgdlg.h>
 
 #include "ImagePanel.h"
 #include "EbsdSummaryPanel.h"
@@ -96,6 +97,8 @@ class IndexingFrame : public wxFrame {
 			//handle event type
 			if(IdxError == i) {//an error
 				//nothing else to do for now (wait for exit message)
+				wxMessageDialog msgDlg(this, event.GetString(), "Error Indexing");
+				msgDlg.ShowModal();//make sure user sees message (since it will be overwritten with "Indexing Stopped")
 			} else if(IdxCmplt == i || IdxExit == i) {//(un)successful indexing completion
 				idxThd.join();//wait for the thread to wrap up
 				m_sumPan->EnableEditing(true);//enable the parameter panel
@@ -174,7 +177,18 @@ void IndexingFrame::startIdx() {
 				//wait for completion posting updates periodically
 				const std::chrono::milliseconds uptFreq(250);//milliseconds between updates (too long -> unresponsive, too short -> resource intensive), 0.25 ~human reaction time
 				while(!pool.waitAll(uptFreq)) {
-					if(!flg.test_and_set()) throw std::runtime_error("Stop Requested");
+					if(!flg.test_and_set()) {
+						//post error status update
+						evt.SetString("Stop Requested");
+						wxPostEvent(this, evt);
+						pool.clear();//clear all unstarted items
+						evt.SetString("Indexing Stopped");
+						evt.SetInt(0);
+						wxPostEvent(this, evt);//update image + progress bar
+						evt.SetInt(IdxExit);
+						wxPostEvent(this, evt);//mark exit
+						return;
+					}
 
 					//get the time elapsed since we started (without resetting the reference point)
 					const double elapsed = t.poll(false);
@@ -216,6 +230,10 @@ void IndexingFrame::startIdx() {
 		} catch (std::exception& e) {
 			//post error message
 			evt.SetString(e.what());
+			evt.SetInt(IdxError);
+			wxPostEvent(this, evt);
+		} catch (...) {
+			evt.SetString("Unhandled exception type during indexing, please contact developers");
 			evt.SetInt(IdxError);
 			wxPostEvent(this, evt);
 		}
