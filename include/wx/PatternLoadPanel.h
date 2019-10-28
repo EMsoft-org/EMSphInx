@@ -54,6 +54,7 @@
 #include <wx/checkbox.h>
 #include <wx/panel.h>
 #include <wx/valnum.h>
+#include <wx/progdlg.h>
 
 #include "wx/ValidityPanel.h"
 
@@ -463,7 +464,11 @@ bool PatternLoadPanel::LoadImages() {
 
 	//build the pattern file
 	std::shared_ptr<emsphinx::ebsd::PatternFile> pat;
+	wxProgressDialog dlg("Loading Patterns", "Loading Preview Patterns", 1, this);
+	dlg.Show();
+	if(!dlg.Pulse()) return false;//we don't know how long setting up the input file will take (but it should be pretty fast for most types)
 	try {
+		//if this takes too long we should put it in a thread and call Pulse periodically to keep program responsive
 		pat = emsphinx::ebsd::PatternFile::Read(getFile().ToStdString(), aux, getW(), getH());
 		if(NULL == pat.get()) throw std::runtime_error("failed to read patterns (nullptr)\n");
 	} catch (std::exception& e) {
@@ -473,6 +478,7 @@ bool PatternLoadPanel::LoadImages() {
 		ClearFile();
 		return false;
 	}
+	dlg.SetRange(pat->numPat());
 
 	//actually load the patterns
 	size_t numLoad = getNprv();
@@ -483,6 +489,7 @@ bool PatternLoadPanel::LoadImages() {
 	size_t idxNext = 0;
 	for(size_t i = 0; i < pat->numPat(); i++) {
 		pat->extract(buff.data(), 1);//read a pattern
+		if(!dlg.Update(i)) return false;//canceled
 		if(i == idxNext) {
 			switch(pat->pixelType()) {
 				case emsphinx::ImageSource::Bits::UNK: break;
