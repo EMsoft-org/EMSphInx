@@ -53,6 +53,7 @@
 #include <wx/srchctrl.h>
 #include <wx/panel.h>
 #include <wx/rearrangectrl.h>
+#include <wx/progdlg.h>
 
 #include "wx/ValidityPanel.h"
 #include "wx/MasterFileList.hpp"
@@ -96,6 +97,11 @@ class MasterPatternSelectPanel : public ValidityPanel {
 		//@return   : status string
 		std::string AddPatternFile(wxString str, bool top = false);
 
+		//@brief    : add many patterns to the library w/ progress bar
+		//@param lib: pattern files to add
+		//@return   : number added
+		size_t AddPatternFiles(const std::vector<wxString>& lib);
+
 	public:
 
 		//@brief : check if the panel is currently valid
@@ -108,7 +114,7 @@ class MasterPatternSelectPanel : public ValidityPanel {
 
 		//@brief    : set list of known master pattern files
 		//@param lib: full paths to known pattern files
-		void setLibrary(const std::vector<wxString>& lib) {for(const wxString& str : lib) AddPatternFile(str);}
+		void setLibrary(const std::vector<wxString>& lib) {AddPatternFiles(lib);}
 
 		std::vector<std::string> getSelected() const;
 
@@ -190,12 +196,18 @@ void MasterPatternSelectPanel::DirClicked     ( wxCommandEvent& event ) {
 	wxDirDialog openDirDlg(this, _("Add Master Pattern Folder"), wxEmptyString, wxDD_DIR_MUST_EXIST);
 	if(openDirDlg.ShowModal() == wxID_CANCEL) return;
 
-	//loop over all files in folder
+	//get list of sht files and convert to vector<wxString>
 	wxArrayString files;
+	std::vector<wxString> vFiles;
 	wxDir::GetAllFiles(openDirDlg.GetPath(), &files, "*.sht", wxDIR_DIRS | wxDIR_FILES);
-	std::vector<wxString> added;
-	for(const wxString& str : files) {
-		if(AddPatternFile(str, false).empty()) added.push_back(str);
+	vFiles.reserve(files.GetCount());
+	for(const wxString& str : files) vFiles.push_back(str);
+
+	//add files and show dialog with result
+	const size_t num = AddPatternFiles(vFiles);
+	if(0 == num) {
+		wxMessageDialog msgDlg(this, "no new *.sht files found", "Error Adding Files");
+		msgDlg.ShowModal();
 	}
 }
 
@@ -327,6 +339,25 @@ std::string MasterPatternSelectPanel::AddPatternFile(wxString str, bool top) {
 		// ClearSearch();//it is probably confusing to users if the new file doesn't show up
 		return m_libLst->AddItem(MasterFile(str), false) ? "" : "couldn't read master pattern from file";
 	}
+}
+
+
+//@brief    : add many patterns to the library w/ progress bar
+//@param lib: pattern files to add
+//@return   : number added
+size_t MasterPatternSelectPanel::AddPatternFiles(const std::vector<wxString>& lib) {
+	if(lib.empty()) return 0;//handle trivial case without progress dialog
+	size_t count = 0;
+	std::ostringstream ss;
+	ss << "Reading " << lib.size() << " Master Pattern Files";
+	wxProgressDialog dlg("Loading Database", ss.str(), lib.size(), this);
+	dlg.Show();
+	for(size_t i = 0; i < lib.size(); ++i ) {
+		if (!dlg.Update(i)) break;//cancelled
+		if(m_libLst->HasItem(lib[i])) continue;//don't create duplicate entries
+		if(m_libLst->AddItem(MasterFile(lib[i]), false)) ++count;
+	}
+	return count;
 }
 
 #endif//_MP_SEL_H_
