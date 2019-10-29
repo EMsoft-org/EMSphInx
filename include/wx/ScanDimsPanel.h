@@ -70,8 +70,7 @@ class ScanDimsPanel : public ValidityPanel
 {
 	private:
 		int m_numPat = -1;
-		std::shared_ptr<emsphinx::ebsd::PatternFile> m_pat;;//can be null
-		std::shared_ptr< std::vector<float> > m_iq, m_ci;//existing maps (can be NULL)
+		std::shared_ptr< std::vector<float> > m_iq, m_ci, m_iqCalc;//existing maps (can be NULL)
 
 		emsphinx::RoiSelection m_roi;//roi
 		std::vector<char> m_mask;//current roi mask
@@ -136,15 +135,15 @@ class ScanDimsPanel : public ValidityPanel
 		//@param z: pixel width in microns
 		void setY(const float y) {m_txtY->Clear(); m_txtY->operator<<(y);}
 
-		//@brief    : set pattern file (to compute # patterns and do preview)
-		//@param pat: shared pointer to pattern file
-		void setPats(std::shared_ptr<emsphinx::ebsd::PatternFile> pats) {m_pat = pats; updateChoices();}
-
 		//@brief    : set existing maps (for preview) and # patterns
 		//@param iq : iq map
 		//@param ci : ci map
 		//@param num: number of patterns
 		void setMaps(std::shared_ptr< std::vector<float> > iq, std::shared_ptr< std::vector<float> > ci, int num) {m_iq = iq; m_ci = ci; m_numPat = num; updateChoices();}
+
+		//@brief    : set self computed image quality map
+		//@param iq : iq map computed directly from patterns
+		void setCalcIq(std::shared_ptr< std::vector<float> > iq) {m_iqCalc = iq; updateChoices();}
 
 		//@brief : get the selected map (or empty pointer for no selection)
 		//@return: currently selected image
@@ -158,6 +157,7 @@ class ScanDimsPanel : public ValidityPanel
 		//@return: true if the values parsed from the panel are reasonable, false otherwise
 		//@note  : checks for has a file, has detector sizes, and has an AHE value
 		std::string validMsg() const {
+			m_btnRoi->Enable(false);
 			if(m_txtW->GetLineText(0).IsEmpty()) return "scan width empty";
 			if(m_txtH->GetLineText(0).IsEmpty()) return "scan height empty";
 			if(m_txtX->GetLineText(0).IsEmpty()) return "x step empty";
@@ -167,6 +167,7 @@ class ScanDimsPanel : public ValidityPanel
 			ss << m_numPat << " patterns for " << numPix << " pixels";
 			if(numPix > m_numPat) return "not enough patterns (" + ss.str() + ')';
 			if(numPix < m_numPat && !m_chkDims->IsChecked()) return "too many patterns (" + ss.str() + ')';
+			m_btnRoi->Enable(true);
 			return "";
 		}
 
@@ -181,6 +182,7 @@ class ScanDimsPanel : public ValidityPanel
 
 ///////////////////////////////////////////////////////////////////////////
 
+#include <wx/msgdlg.h>
 
 #include "SinglePanelDialog.h"
 #include "RoiSelectionPanel.h"
@@ -188,33 +190,16 @@ class ScanDimsPanel : public ValidityPanel
 void ScanDimsPanel::updateChoices() {
 	//accumluate choices
 	int numChoice = 0;
-	int prefChoice = 0;
 	wxString choices[3];
-/*
-TODO: enable this in DoROI
-	if(NULL != m_pat.get()) {
-		prefChoice = numChoice;
-		choices[numChoice++] = wxT("Compute IQ");
-	}
-*/
-	if(NULL == m_ci.get() ? false : !m_ci->empty()) {
-		prefChoice = numChoice;//prefer existing CI of computing IQ (faster)
-		choices[numChoice++] = wxT("Existing CI");
-	}
-	if(NULL == m_iq.get() ? false : !m_iq->empty()) {
-		prefChoice = numChoice;//prefer existing IQ over existing CI (nicer image)
-		choices[numChoice++] = wxT("Existing IQ");
-	}
-
-	//reverse choice order for box
-	std::reverse(choices, choices + numChoice);
-	prefChoice = numChoice - 1 - prefChoice;
+	if(NULL != m_iqCalc.get()) choices[numChoice++] = wxT("Computed IQ");//prefer computed iq over everything (most consistent)
+	if(NULL == m_iq.get() ? false : !m_iq->empty()) choices[numChoice++] = wxT("Existing IQ");//prefer existing iq over existing ci (nicer image)
+	if(NULL == m_ci.get() ? false : !m_ci->empty()) choices[numChoice++] = wxT("Existing CI");
 
 	//now build box and set choice 
 	m_cmbRoiIm->Clear();
 	for(int i = 0; i < numChoice; i++) m_cmbRoiIm->Append(choices[i]);
-	m_cmbRoiIm->SetSelection(prefChoice);
-	m_btnRoi->Enable(numChoice > 0);
+	m_cmbRoiIm->SetSelection(0 == numChoice ? wxNOT_FOUND : 0);
+	// m_btnRoi->Enable(numChoice > 0);
 }
 
 //@brief : get the selected map (or empty pointer for no selection)
@@ -225,6 +210,7 @@ wxImage ScanDimsPanel::getMap() const {
 	wxString sel = m_cmbRoiIm->GetString(m_cmbRoiIm->GetSelection());
 	if     (wxString("Existing CI") == sel) ptr = m_ci;
 	else if(wxString("Existing IQ") == sel) ptr = m_iq;
+	else if(wxString("Computed IQ") == sel) ptr = m_iqCalc;
 
 	//convert to 8 bit (this needs to be moved to another file)
 	std::vector<char> buff(m_numPat);
@@ -251,6 +237,12 @@ wxImage ScanDimsPanel::getMap() const {
 }
 
 void ScanDimsPanel::DoROI( wxCommandEvent& event ) {
+	if(0 == m_cmbRoiIm->GetCount()) {
+		wxMessageDialog msgDlg(this, "No suitable maps found, try selecting a pattern file with more data (*.h5 scan or *.upX/*.ebsp with associated *.ang/*.ctf) or computing image quailty during pattern load", "Error");
+		msgDlg.ShowModal();
+		return;
+	}
+
 	SinglePanelDialog<RoiSelectionPanel> dlg(this, wxID_ANY, "Select ROI");
 	wxImage im = getMap();
 	dlg.getPanel()->setImage(im);
@@ -377,7 +369,7 @@ ScanDimsPanel::ScanDimsPanel( wxWindow* parent, wxWindowID id, const wxPoint& po
 
 	this->SetSizer( bScnDm );
 	this->Layout();
-	m_btnRoi->Enable(false);//we don't have an image source yet
+	// m_btnRoi->Enable(false);//we don't have an image source yet
 	m_btnClear->Enable(false);//we don't have an ROI yet
 
 	// Connect Events

@@ -70,6 +70,7 @@ class PatternLoadPanelBase : public ValidityPanel {
 		wxTextCtrl      * m_txtH      ;
 		wxTextCtrl      * m_txtBit    ;
 		wxTextCtrl      * m_txtNum    ;
+		wxCheckBox      * m_checkIq   ;
 		wxTextCtrl      * m_txtPrvCnt ;
 		wxButton        * m_btnPrv    ;
 		wxTextCtrl      * m_mskRad    ;
@@ -97,6 +98,8 @@ class PatternLoadPanelBase : public ValidityPanel {
 		bool IsEnabledWH() const {return m_txtW->IsEnabled() && m_txtH->IsEnabled();}
 		void EnablePrv(const bool enable) {m_btnPrv->Enable(enable);}
 		void ClearInfo();
+
+		bool getIqChecked() const {return m_checkIq->IsChecked();}
 
 	public:
 
@@ -156,6 +159,7 @@ class PatternLoadPanel : public PatternLoadPanelBase {
 
 	int imW, imH;
 	std::shared_ptr< std::vector< std::vector<char> > > images;//preview images
+	std::shared_ptr< std::vector<float> > iqMap;//computed image quality map
 
 	void DimChanged();
 
@@ -174,9 +178,10 @@ class PatternLoadPanel : public PatternLoadPanelBase {
 
 	public:
 		bool LoadImages();
-		void InavlidateImages() {images->clear(), imW = -1, imH = -1;}
-		bool ImagesValid() const {return !images->empty() && getNprv() == images->size() && getW() == imW && getH() == imH;}
+		void InavlidateImages() {images->clear(), imW = -1, imH = -1, iqMap.reset();}
+		bool ImagesValid() const {return !images->empty() && getNprv() == images->size() && getW() == imW && getH() == imH && (getIqChecked() ? NULL != iqMap.get() : true);}
 		std::shared_ptr< std::vector< std::vector<char> > > GetImages() {return images;}
+		std::shared_ptr< std::vector< float             > > GetIQ() {return iqMap;}
 		PatternLoadPanel( wxWindow* parent, wxWindowID id = wxID_ANY) : PatternLoadPanelBase(parent, id) {images = std::make_shared< std::vector< std::vector<char> > >(); InavlidateImages();}
 
 		bool validFile() const {return wxFileExists(getFile());}
@@ -221,9 +226,6 @@ PatternLoadPanelBase::PatternLoadPanelBase( wxWindow* parent, wxWindowID id, con
 	wxStaticBoxSizer* sbPatFile = new wxStaticBoxSizer( new wxStaticBox( this, wxID_ANY, wxT("Pattern File"    ) ), wxVERTICAL );
 	wxStaticBoxSizer* sbPatInfo = new wxStaticBoxSizer( new wxStaticBox( this, wxID_ANY, wxT("Pattern Info"    ) ), wxVERTICAL );
 	wxStaticBoxSizer* sbImPrc   = new wxStaticBoxSizer( new wxStaticBox( this, wxID_ANY, wxT("Image Processing") ), wxVERTICAL );
-	bPatInfo->Add( sbPatFile, 0, wxEXPAND, 5 );
-	bPatInfo->Add( sbPatInfo, 1, wxEXPAND, 5 );
-	bPatInfo->Add( sbImPrc  , 1, wxEXPAND, 5 );
 
 	//middle box is 6x4 grid
 	wxFlexGridSizer* fgPatInfo = new wxFlexGridSizer( 4, 6, 0, 0 );
@@ -274,6 +276,8 @@ PatternLoadPanelBase::PatternLoadPanelBase( wxWindow* parent, wxWindowID id, con
 	m_txtBit = new wxTextCtrl( sbPatInfo->GetStaticBox(), wxID_ANY, wxT("Unknown"), wxDefaultPosition, wxDefaultSize, wxTE_CENTER|wxTE_READONLY          );
 	m_txtNum = new wxTextCtrl( sbPatInfo->GetStaticBox(), wxID_ANY, wxT("Unknown"), wxDefaultPosition, wxDefaultSize, wxTE_CENTER|wxTE_READONLY          );
 
+	m_checkIq   = new wxCheckBox( this, wxID_ANY, wxT("Compute Image Quality Map for ROI Selection"), wxDefaultPosition, wxDefaultSize, 0);
+
 	//build elements for image processing box
 	m_txtPrvCnt = new wxTextCtrl( sbImPrc->GetStaticBox(), wxID_ANY, wxT("1"                  ), wxDefaultPosition, wxDefaultSize, wxTE_CENTER|wxTE_PROCESS_ENTER, valPrvNum );
 	m_btnPrv    = new wxButton  ( sbImPrc->GetStaticBox(), wxID_ANY, wxT("Preview..."         ), wxDefaultPosition, wxDefaultSize, 0                                         );
@@ -281,6 +285,11 @@ PatternLoadPanelBase::PatternLoadPanelBase( wxWindow* parent, wxWindowID id, con
 	m_chkBckg   = new wxCheckBox( sbImPrc->GetStaticBox(), wxID_ANY, wxT("Gaussian Background"), wxDefaultPosition, wxDefaultSize, 0                                         );
 	m_txtNReg   = new wxTextCtrl( sbImPrc->GetStaticBox(), wxID_ANY, wxT("0"                  ), wxDefaultPosition, wxDefaultSize, wxTE_CENTER                   , valAhe    );
 	m_btnPrv->Enable(false);
+
+	bPatInfo->Add( sbPatFile, 0, wxEXPAND, 5 );
+	bPatInfo->Add( sbPatInfo, 1, wxEXPAND, 5 );
+	bPatInfo->Add( m_checkIq, 0, wxALIGN_CENTER_VERTICAL|wxALIGN_CENTER_HORIZONTAL, 5 );
+	bPatInfo->Add( sbImPrc  , 1, wxEXPAND, 5 );
 
 	//assemble pattern info grid
 	fgPatInfo->Add( 0            , 0, 1    , wxEXPAND                                        , 5 );
@@ -377,6 +386,8 @@ PatternLoadPanelBase::~PatternLoadPanelBase() {
 #include "PatternPreviewPanel.h"
 #include "SinglePanelDialog.h"
 
+#include "util/image.hpp"//image quality calculator
+
 void PatternLoadPanel::DimChanged() {
 	if(32 == getBit() && IsEnabledWH()) {//a *.data file is currently loaded
 		size_t bytes = 4 * getW() * getH();//patterns per byte
@@ -462,10 +473,13 @@ void PatternLoadPanel::FileChanged( wxFileDirPickerEvent& event ) {
 //launch pattern preview on button click
 bool PatternLoadPanel::LoadImages() {
 	if(ImagesValid()) return true;//already up to date
+	InavlidateImages();
 
 	//build the pattern file
 	std::shared_ptr<emsphinx::ebsd::PatternFile> pat;
-	wxProgressDialog dlg("Loading Patterns", "Loading Preview Patterns", 1, this, wxPD_CAN_ABORT | wxPD_APP_MODAL | wxPD_AUTO_HIDE | wxPD_ELAPSED_TIME | wxPD_REMAINING_TIME);
+	std::string msg = "Loading Preview Patterns";
+	if(getIqChecked()) msg += " and Computing IQ";
+	wxProgressDialog dlg("Loading Patterns", msg, 1, this, wxPD_CAN_ABORT | wxPD_APP_MODAL | wxPD_AUTO_HIDE | wxPD_ELAPSED_TIME | wxPD_REMAINING_TIME);
 	dlg.Show();
 	if(!dlg.Pulse()) return false;//we don't know how long setting up the input file will take (but it should be pretty fast for most types)
 	try {
@@ -482,7 +496,6 @@ bool PatternLoadPanel::LoadImages() {
 
 	//initiailize loading
 	size_t numLoad = getNprv();
-	images->clear();
 	images->reserve(numLoad);
 	dlg.SetRange(pat->numPat());
 
@@ -491,7 +504,17 @@ bool PatternLoadPanel::LoadImages() {
 	prg.store(0);
 	std::atomic_flag flg;//keep working flag
 	flg.test_and_set();
+	if(getIqChecked()) iqMap = std::make_shared< std::vector< float > >(pat->numPat());
 	std::thread thd = std::thread([pat,this,numLoad,&prg,&flg](){
+		//build image quality calculator if needed
+		const bool doIq = NULL != iqMap.get();
+		std::shared_ptr< image::ImageQualityCalc<double> > pIq;
+		std::vector<double> dBuff;
+		if(doIq) {
+			dBuff.resize(pat->width() * pat->height());
+			pIq = std::make_shared< image::ImageQualityCalc<double> >(pat->width(), pat->height());//build a single image calculator
+		}
+
 		size_t idxNext = 0;
 		const double spacing = double(pat->numPat()) / numLoad;
 		std::vector<char> buff(pat->imBytes());
@@ -499,10 +522,32 @@ bool PatternLoadPanel::LoadImages() {
 		for(size_t i = 0; i < pat->numPat(); i++) {
 			if(!flg.test_and_set()) {//was a cancel requested?
 				flg.clear();//reclear flag
-				break;//stop
+				return;
 			}
 			prg.store(i);//store progress
 			pat->extract(buff.data(), 1);//read a pattern
+
+			//compute IQ if needed
+			if(doIq) {
+				switch(pat->pixelType()) {
+					case emsphinx::ImageSource::Bits::UNK: break;
+					case emsphinx::ImageSource::Bits::U8 : {
+						uint8_t* ptr = (uint8_t*)buff.data();
+						std::transform(ptr, ptr + pat->numPix(), dBuff.data(), [](const uint8_t& v) {return (double)v;});
+					}break;
+					case emsphinx::ImageSource::Bits::U16: {
+						uint16_t* ptr = (uint16_t*)buff.data();
+						std::transform(ptr, ptr + pat->numPix(), dBuff.data(), [](const uint16_t& v) {return (double)v;});
+					} break;
+					case emsphinx::ImageSource::Bits::F32: {
+						float* ptr = (float*)buff.data();
+						std::transform(ptr, ptr + pat->numPix(), dBuff.data(), [](const float& v) {return (double)v;});
+					} break;
+				}
+				iqMap->operator[](i) = (float) pIq->compute(dBuff.data());
+			}
+
+			//save pattern if needed
 			if(i == idxNext) {
 				switch(pat->pixelType()) {
 					case emsphinx::ImageSource::Bits::UNK: break;
@@ -536,7 +581,8 @@ bool PatternLoadPanel::LoadImages() {
 		curPrg = prg.load();//get current progress
 		if(!dlg.Update(curPrg)) {
 			flg.clear();//tell worker to stop
-			thd.join();
+			thd.join();//wait for worker to finish
+			InavlidateImages();//clear images
 			return false;
 		}
 	}

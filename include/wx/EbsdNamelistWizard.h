@@ -136,6 +136,7 @@ class EbsdNamelistWizard : public ValidityWizard
 					nml.nRegions = m_patLoadPan->getNreg();
 
 					m_patCenPan->setBinnedPix(m_patLoadPan->getW(), m_patLoadPan->getH());//save binned detector size
+					m_scnDimPan->setCalcIq(m_patLoadPan->GetIQ());//set iq map (null for no map)
 				break;
 
 				case 1://master pattern
@@ -195,7 +196,6 @@ class EbsdNamelistWizard : public ValidityWizard
 			}
 
 			m_scnDimPan->setMaps(iqMap, ciMap, m_patLoadPan->getNum());//set maps (empty or not) + pattern count
-			m_scnDimPan->setPats( emsphinx::ebsd::PatternFile::Read(m_patLoadPan->getFile().ToStdString(), m_patLoadPan->getAux(), m_patLoadPan->getW(), m_patLoadPan->getH()) );
 		}
 
 	public:
