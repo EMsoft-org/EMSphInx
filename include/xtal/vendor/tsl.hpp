@@ -781,7 +781,7 @@ namespace tsl {
 
 		for(int32_t j = 0; j < nRows; j++) {
 			for(int32_t i = 0; i < nColsOdd; i++) {
-				const int32_t idx = j * nRows + i;
+				const int32_t idx = j * nColsOdd + i;
 				os << std::setprecision(5);
 				os        << std::setw( 9) <<      eu   [3*idx  ];
 				os << ' ' << std::setw( 9) <<      eu   [3*idx+1];
