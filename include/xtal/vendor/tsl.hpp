@@ -765,12 +765,13 @@ namespace tsl {
 	void OrientationMap::writeAngData(std::ostream& os) {
 		const bool writeSem = !sem.empty();
 		const bool writeFit = !fit.empty() && writeSem;
-		const size_t pts = eu.size() / 3;
-		if(x    .size() != pts) throw std::runtime_error("incomplete x     data for ang");
-		if(y    .size() != pts) throw std::runtime_error("incomplete y     data for ang");
-		if(iq   .size() != pts) throw std::runtime_error("incomplete iq    data for ang");
-		if(ci   .size() != pts) throw std::runtime_error("incomplete ci    data for ang");
-		if(phase.size() != pts) throw std::runtime_error("incomplete phase data for ang");
+		const size_t pts = nRows * nColsOdd;
+		if(eu   .size() != pts * 3) throw std::runtime_error("incomplete eu    data for ang");
+		if(x    .size() != pts    ) throw std::runtime_error("incomplete x     data for ang");
+		if(y    .size() != pts    ) throw std::runtime_error("incomplete y     data for ang");
+		if(iq   .size() != pts    ) throw std::runtime_error("incomplete iq    data for ang");
+		if(ci   .size() != pts    ) throw std::runtime_error("incomplete ci    data for ang");
+		if(phase.size() != pts    ) throw std::runtime_error("incomplete phase data for ang");
 		if(writeSem) {
 			if(sem.size() != pts) throw std::runtime_error("incomplete sem data for ang");
 			if(writeFit) {
