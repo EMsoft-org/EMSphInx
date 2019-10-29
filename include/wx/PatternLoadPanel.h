@@ -369,6 +369,9 @@ PatternLoadPanelBase::~PatternLoadPanelBase() {
 
 ////////////////////////////////////////////////////////////////////
 
+#include <thread>
+#include <atomic>
+
 #include <wx/msgdlg.h>
 #include <wx/choicdlg.h>
 #include "PatternPreviewPanel.h"
@@ -460,11 +463,9 @@ void PatternLoadPanel::FileChanged( wxFileDirPickerEvent& event ) {
 bool PatternLoadPanel::LoadImages() {
 	if(ImagesValid()) return true;//already up to date
 
-	//TODO: put pattern loading into thread with wait indicator
-
 	//build the pattern file
 	std::shared_ptr<emsphinx::ebsd::PatternFile> pat;
-	wxProgressDialog dlg("Loading Patterns", "Loading Preview Patterns", 1, this);
+	wxProgressDialog dlg("Loading Patterns", "Loading Preview Patterns", 1, this, wxPD_CAN_ABORT | wxPD_APP_MODAL | wxPD_AUTO_HIDE | wxPD_ELAPSED_TIME | wxPD_REMAINING_TIME);
 	dlg.Show();
 	if(!dlg.Pulse()) return false;//we don't know how long setting up the input file will take (but it should be pretty fast for most types)
 	try {
@@ -478,39 +479,70 @@ bool PatternLoadPanel::LoadImages() {
 		ClearFile();
 		return false;
 	}
-	dlg.SetRange(pat->numPat());
 
-	//actually load the patterns
+	//initiailize loading
 	size_t numLoad = getNprv();
 	images->clear();
-	std::vector<char> buff(pat->imBytes());
-	std::vector<char> buff8(pat->imBytes(), 0);//fill with 0 for emsphinx::ImageSource::Bits::UNK
-	const double spacing = double(pat->numPat()) / numLoad;
-	size_t idxNext = 0;
-	for(size_t i = 0; i < pat->numPat(); i++) {
-		pat->extract(buff.data(), 1);//read a pattern
-		if(!dlg.Update(i)) return false;//canceled
-		if(i == idxNext) {
-			switch(pat->pixelType()) {
-				case emsphinx::ImageSource::Bits::UNK: break;
-				case emsphinx::ImageSource::Bits::U8 : buff8.swap(buff); break;
-				case emsphinx::ImageSource::Bits::U16: {
-					uint16_t* ptr = (uint16_t*)buff.data();
-					std::pair<uint16_t*, uint16_t*> minMax = std::minmax_element(ptr, ptr + pat->numPix());//compute minimum and maximum quality
-					const double scale = double(255) / (*minMax.second - *minMax.first);
-					std::transform(ptr, ptr + pat->numPix(), (uint8_t*)buff8.data(), [&](const uint16_t& v){return (uint8_t)std::round(scale * (v - (*minMax.first)));});
-				} break;
-				case emsphinx::ImageSource::Bits::F32: {
-					float* ptr = (float*)buff.data();
-					std::pair<float*, float*> minMax = std::minmax_element(ptr, ptr + pat->numPix());//compute minimum and maximum quality
-					const float scale = 255.0f / (*minMax.second - *minMax.first);
-					std::transform(ptr, ptr + pat->numPix(), (uint8_t*)buff8.data(), [&](const float& v){return (uint8_t)std::round(scale * (v - (*minMax.first)));});
-				} break;
+	images->reserve(numLoad);
+	dlg.SetRange(pat->numPat());
+
+	//start a thread actually load the patterns
+	std::atomic<size_t> prg;//counter for current progress
+	prg.store(0);
+	std::atomic_flag flg;//keep working flag
+	flg.test_and_set();
+	std::thread thd = std::thread([pat,this,numLoad,&prg,&flg](){
+		size_t idxNext = 0;
+		const double spacing = double(pat->numPat()) / numLoad;
+		std::vector<char> buff(pat->imBytes());
+		std::vector<char> buff8(pat->imBytes(), 0);//fill with 0 for emsphinx::ImageSource::Bits::UNK
+		for(size_t i = 0; i < pat->numPat(); i++) {
+			if(!flg.test_and_set()) {//was a cancel requested?
+				flg.clear();//reclear flag
+				break;//stop
 			}
-			images->push_back(buff8);
-			idxNext = (size_t) std::round(spacing * images->size());
+			prg.store(i);//store progress
+			pat->extract(buff.data(), 1);//read a pattern
+			if(i == idxNext) {
+				switch(pat->pixelType()) {
+					case emsphinx::ImageSource::Bits::UNK: break;
+					case emsphinx::ImageSource::Bits::U8 : buff8.swap(buff); break;
+					case emsphinx::ImageSource::Bits::U16: {
+						uint16_t* ptr = (uint16_t*)buff.data();
+						std::pair<uint16_t*, uint16_t*> minMax = std::minmax_element(ptr, ptr + pat->numPix());//compute minimum and maximum quality
+						const double scale = double(255) / (*minMax.second - *minMax.first);
+						std::transform(ptr, ptr + pat->numPix(), (uint8_t*)buff8.data(), [&](const uint16_t& v){return (uint8_t)std::round(scale * (v - (*minMax.first)));});
+					} break;
+					case emsphinx::ImageSource::Bits::F32: {
+						float* ptr = (float*)buff.data();
+						std::pair<float*, float*> minMax = std::minmax_element(ptr, ptr + pat->numPix());//compute minimum and maximum quality
+						const float scale = 255.0f / (*minMax.second - *minMax.first);
+						std::transform(ptr, ptr + pat->numPix(), (uint8_t*)buff8.data(), [&](const float& v){return (uint8_t)std::round(scale * (v - (*minMax.first)));});
+					} break;
+				}
+				images->push_back(buff8);
+				idxNext = (size_t) std::round(spacing * images->size());
+			}
+		}
+
+		//flag completion
+		prg.store(pat->numPat());
+	});
+
+	//wait for loading to finish
+	size_t curPrg = prg.load();
+	while(curPrg != pat->numPat()) {
+		std::this_thread::sleep_for(std::chrono::milliseconds(30));//~30 fps update
+		curPrg = prg.load();//get current progress
+		if(!dlg.Update(curPrg)) {
+			flg.clear();//tell worker to stop
+			thd.join();
+			return false;
 		}
 	}
+	thd.join();
+
+	//update
 	imW = pat->width ();
 	imH = pat->height();
 	return true;
