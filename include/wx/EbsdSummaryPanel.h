@@ -272,6 +272,9 @@ class EbsdSummaryPanel : public ValidityPanel {
 			m_propScanInfo->Enable(enb);
 		}
 
+		//@brief: get the current master pattern list
+		wxArrayString getMP() const {return m_propMP->DoGetValue().GetArrayString();}
+
 		EbsdSummaryPanel( wxWindow* parent, wxWindowID id = wxID_ANY, const wxPoint& pos = wxDefaultPosition, const wxSize& size = wxSize( 569,588 ), long style = wxTAB_TRAVERSAL, const wxString& name = wxEmptyString );
 		~EbsdSummaryPanel();
 };

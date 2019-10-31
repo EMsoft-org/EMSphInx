@@ -78,6 +78,12 @@ namespace emsphinx {
 	static const std::string GitBranch = EM_2_STR(EMSPHINX_GIT_BRANCH);
 	static const std::string GitHash   = EM_2_STR(EMSPHINX_GIT_HASH);
 	static const std::string Version   = GitBranch + ':' + GitHash;
+
+	namespace references {
+		static const std::string LentheIdx  = "@article{lentheidx,\n\tauthor = \"Lenthe, William and Singh, Saransh and De Graef, Marc\",\n\ttitle = \"A spherical harmonic transform approach to the indexing of electron back-scattered diffraction patterns\",\n\tjournal = \"Ultramicroscopy\",\n\tyear = \"2019\",\n\tvolume = \"207\",\n\tpages = \"112841\",\n\tissn = \"0304-3991\",\n\tdoi = \"https://doi.org/10.1016/j.ultramic.2019.112841\"\n}\n";
+		static const std::string LenthePS   = "@article{lentheps,\n\tauthor = \"Lenthe, William and Singh, Saransh and De Graef, Marc\",\n\ttitle = \"Prediction of potential pseudo-symmetry issues in the indexing of electron backscatter diffraction patterns\",\n\tjournal = \"Journal of Applied Crystallography\",\n\tyear = \"2019\",\n\tmonth = \"Oct\",\n\tvolume = \"52\",\n\tnumber = \"5\",\n\tpages = \"1157--1168\",\n\tdoi = \"https://doi.org/10.1107/S1600576719011233\"\n}\n";
+		static const std::string LentheFile = "{reference coming soon}\n";
+	}
 }
 
 namespace emsphinx {

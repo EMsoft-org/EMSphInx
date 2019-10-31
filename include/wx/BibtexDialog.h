@@ -73,24 +73,25 @@ class BibtexDialog : public wxDialog {
 	public:
 
 		bool Silence() const {return m_chk->GetValue();}
+		void Silence(bool v) const {m_chk->SetValue(v);}
 
-		BibtexDialog( wxWindow* parent, wxWindowID id = wxID_ANY, const wxString& title = wxEmptyString, const wxPoint& pos = wxDefaultPosition, const wxSize& size = wxSize( 475,325 ), long style = wxDEFAULT_DIALOG_STYLE );
+		BibtexDialog(std::string text, wxWindow* parent, wxWindowID id = wxID_ANY, const wxString& title = wxEmptyString, const wxPoint& pos = wxDefaultPosition, const wxSize& size = wxSize( 450,600 ), long style = wxDEFAULT_DIALOG_STYLE | wxRESIZE_BORDER );
 		~BibtexDialog();
 
 };
 
 ///////////////////////////////////////////////////////////////////////////
 
-BibtexDialog::BibtexDialog( wxWindow* parent, wxWindowID id, const wxString& title, const wxPoint& pos, const wxSize& size, long style ) : wxDialog( parent, id, title, pos, size, style ) {
+BibtexDialog::BibtexDialog(std::string text, wxWindow* parent, wxWindowID id, const wxString& title, const wxPoint& pos, const wxSize& size, long style ) : wxDialog( parent, id, title, pos, size, style ) {
 	this->SetSizeHints( wxDefaultSize, wxDefaultSize );
 
 	wxBoxSizer* vSizer = new wxBoxSizer( wxVERTICAL   );
 	wxBoxSizer* hSizer = new wxBoxSizer( wxHORIZONTAL );
 
-	wxStaticText* staTxt = new wxStaticText( this, wxID_ANY, wxT("If you find this software useful, please consider citing the corresponding paper:"), wxDefaultPosition, wxDefaultSize, 0 ); staTxt->Wrap( -1 );
+	wxStaticText* staTxt = new wxStaticText( this, wxID_ANY, wxT("If you find this software useful, please consider citing the corresponding papers:"), wxDefaultPosition, wxDefaultSize, 0 ); staTxt->Wrap( -1 );
+	wxStaticText* staRem = new wxStaticText( this, wxID_ANY, wxT("This dialog can be accessed again through Help>Citations..."), wxDefaultPosition, wxDefaultSize, 0 ); staTxt->Wrap( -1 );
 
-	std::string key = "@article{EMSphInx,\n\ttitle = \"A spherical harmonic transform approach to the indexing of electron back-scattered diffraction patterns\",\n\tjournal = \"Ultramicroscopy\",\n\tvolume = \"207\",\n\tpages = \"112841\",\n\tyear = \"2019\",\n\tissn = \"0304-3991\",\n\tdoi = \"https://doi.org/10.1016/j.ultramic.2019.112841\",\n\tauthor = \"W.C. Lenthe and S. Singh and M. De Graef\",\n}";
-	m_txt    = new wxTextCtrl( this, wxID_ANY, key                                 , wxDefaultPosition, wxDefaultSize, wxTE_DONTWRAP|wxTE_MULTILINE|wxTE_READONLY );
+	m_txt    = new wxTextCtrl( this, wxID_ANY, text                               , wxDefaultPosition, wxDefaultSize, wxTE_DONTWRAP|wxTE_MULTILINE|wxTE_READONLY );
 	m_btnCpy = new wxButton  ( this, wxID_ANY, wxT("Copy to Clipboard"            ), wxDefaultPosition, wxDefaultSize, 0                                          );
 	m_chk    = new wxCheckBox( this, wxID_ANY, wxT("Don't show this message again"), wxDefaultPosition, wxDefaultSize, 0                                          );
 	m_ok     = new wxButton  ( this, wxID_ANY, wxT("Dismiss"                      ), wxDefaultPosition, wxDefaultSize, 0                                          );
@@ -107,7 +108,8 @@ BibtexDialog::BibtexDialog( wxWindow* parent, wxWindowID id, const wxString& tit
 	hSizer->Add( m_ok    , 0, wxALL|wxALIGN_CENTER_VERTICAL  , 5 );
 	hSizer->AddStretchSpacer();
 
-	vSizer->Add( hSizer, 0, wxEXPAND, 5 );
+	vSizer->Add( hSizer  , 0,       wxEXPAND                 , 5 );
+	vSizer->Add( staRem  , 0, wxALL|wxALIGN_CENTER_HORIZONTAL, 5 );
 
 	this->SetSizer( vSizer );
 	this->Layout();

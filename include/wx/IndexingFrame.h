@@ -104,7 +104,7 @@ class IndexingFrame : public wxFrame {
 		virtual void OnFileLoad  ( wxCommandEvent& event ) { saveNamelist(); }
 		virtual void OnFileWizard( wxCommandEvent& event ) { runWizard   (); }
 		virtual void OnHelpAbout ( wxCommandEvent& event ) { showAbout   (); }
-		virtual void OnHelpRefs  ( wxCommandEvent& event ) { showRefs    (); }
+		virtual void OnHelpRefs  ( wxCommandEvent& event ) { showRefs(true); }
 		virtual void OnHelpHelp  ( wxCommandEvent& event ) { showHelp    (); }
 
 		void WizardClosed(wxCloseEvent& event);
@@ -131,14 +131,7 @@ class IndexingFrame : public wxFrame {
 				m_sumPan->EnableEditing(true);//enable the parameter panel
 				m_btn->SetLabel("Start");//change stop button to a start button again
 				m_btn->Enable(true);\
-				if(IdxCmplt == i) {
-					//if we made it this far everything made it, ask users to cite papers
-					if(!wxFileExists(getUserAppDataDir() + "silenced")) {
-						BibtexDialog bDlg(this);
-						bDlg.ShowModal();
-						if(bDlg.Silence()) std::ofstream os(getUserAppDataDir() + "silenced");
-					}
-				}
+				if(IdxCmplt == i) showRefs(false);
 			} else {//status update
 				m_btn->Enable(true);
 				m_prog->SetValue(event.GetInt());//update progress bar
@@ -161,8 +154,9 @@ class IndexingFrame : public wxFrame {
 		//@brief: run the about window
 		void showAbout();
 
-		//@brief: run the references
-		void showRefs();
+		//@brief      : run the references
+		//@param force: should the references be shown even if the dialog was previously silenced
+		void showRefs(const bool force);
 
 		//@brief: show the program help
 		void showHelp();
@@ -196,6 +190,7 @@ END_EVENT_TABLE()
 #include <wx/filedlg.h>
 #include <wx/aboutdlg.h>
 #include "constants.hpp"
+#include "sht_file.hpp"
 
 DEFINE_EVENT_TYPE(wxEVT_IndexingThread)
 
@@ -281,14 +276,54 @@ Pittsburgh, PA 15213\n\
 phone: 412.268.7393\n\
 email: innovation@cmu.edu\n\
 website: https://www.cmu.edu/cttec/");
-
-
     wxAboutBox(aboutInfo);
 }
 
-//@brief: run the references
-void IndexingFrame::showRefs() {
+//@brief      : run the references
+//@param force: should the references be shown even if the dialog was previously silenced
+void IndexingFrame::showRefs(const bool force) {
+	const std::string silFil = getUserAppDataDir() + "silenced";//flag file for silencing
+	const bool silenced = wxFileExists(silFil);
+	if(force || !silenced) {
+		//start with references from software
+		std::string refs = "indexing:\n" + emsphinx::references::LentheIdx
+		                 + "\nmaster pattern file format:\n" + emsphinx::references::LentheFile
+		                 + "\npsuedo-symmetry:\n" + emsphinx::references::LenthePS;
 
+		//accumulate references from selected master pattern files
+		wxArrayString mpList = m_sumPan->getMP();
+		std::string acmDoi, acmXtal;
+		for(size_t i = 0; i < mpList.GetCount(); i++) {
+			std::ifstream is(mpList[i].ToStdString(), std::ios::in | std::ios::binary);//open file for reading
+			if(is) {//file actually exists
+				//read file and get file level doi
+				sht::File file;
+				file.read(is);
+				std::string doi = file.header.doi.substr(0, file.header.doiLen());
+				if(!doi.empty()) acmDoi += doi + '\n';//accumulate doi
+
+				//now loop over crystals getting structure references
+				for(const sht::CrystalData& xtal : file.mpData.xtals) {
+					std::string xref = xtal.refs.substr(0, xtal.refsLen());
+					if(!xref.empty()) acmXtal += xref + '\n';//accumulate doi
+				}
+			}
+		}
+
+		//add file SHT file references
+		if(!acmDoi .empty()) refs += "\nmaster patterns:\n" + acmDoi;
+		if(!acmXtal.empty()) refs += "\ncrystal structures:\n" + acmXtal;
+
+		//show references
+		BibtexDialog bDlg(refs, this);
+		bDlg.Silence(silenced);
+		bDlg.ShowModal();
+		if(bDlg.Silence() && !silenced) {// unsilenced --> silenced
+			std::ofstream os(silFil);
+		} else if(!bDlg.Silence() && silenced) {// silenced --> unsilenced
+			remove(silFil.c_str());
+		}
+	}
 }
 
 //@brief: show the program help
