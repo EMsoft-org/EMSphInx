@@ -194,6 +194,8 @@ END_EVENT_TABLE()
 ///////////////////////////////////////////////////////////////////////////
 
 #include <wx/filedlg.h>
+#include <wx/aboutdlg.h>
+#include "constants.hpp"
 
 DEFINE_EVENT_TYPE(wxEVT_IndexingThread)
 
@@ -251,7 +253,37 @@ std::cout << "wizard closed " << wizard << std::endl;
 
 //@brief: run the about window
 void IndexingFrame::showAbout() {
+	wxAboutDialogInfo aboutInfo;
+	aboutInfo.SetName("EMSphInx");
+	aboutInfo.SetVersion(emsphinx::GitBranch + "-" + emsphinx::GitHash);//the ":" in Version seems to cause display issues...
+	aboutInfo.SetDescription(_("Spherical Harmonics EBSD Indexing"));
+	aboutInfo.SetCopyright("\
+EMSphInx: (C) 2019 De Graef Group, Carnegie Mellon University\n\
+crystallography: (C) 2015-20119 William C. Lenthe\n\
+utilities: (C) 2018-20119 William C. Lenthe\n\
+wxWidgets: (C) 1998-2005 Julian Smart, Robert Roebling et al\n\
+FFTW: (C) 2003, 2007-11 Matteo Frigo, Massachusetts Institute of Technology\n\
+miniz: (C) 2013-2014 RAD Game Tools and Valve Software\n\
+miniz: (C) 2010-2014 Rich Geldreich and Tenacious Software LLC\n\
+");
+	aboutInfo.SetWebSite("https://github.com/EMsoft-org/Emsphinx");
+	aboutInfo.AddDeveloper("William C. Lenthe");
+	aboutInfo.AddArtist("William C. Lenthe");
+	aboutInfo.SetLicense("\
+GPL-2.0 (https://www.gnu.org/licenses/old-licenses/gpl-2.0.html)\n\
+with BSD-3 components, see the license file for details\n\
+Interested in a commercial license? Contact:\n\
+\n\
+Center for Technology Transfer and Enterprise Creation\n\
+4615 Forbes Avenue, Suite 302\n\
+Pittsburgh, PA 15213\n\
+\n\
+phone: 412.268.7393\n\
+email: innovation@cmu.edu\n\
+website: https://www.cmu.edu/cttec/");
 
+
+    wxAboutBox(aboutInfo);
 }
 
 //@brief: run the references
