@@ -112,8 +112,6 @@ class EbsdSummaryPanel : public ValidityPanel {
 
 		void PropChanged( wxPropertyGridEvent& event ) {if(m_propVen == event.GetProperty()) updatePctr();}
 
-		emsphinx::ebsd::Namelist* m_nml;
-
 	public:
 
 		void setIdx(long bw, bool nrm, bool ref) {
@@ -129,7 +127,7 @@ class EbsdSummaryPanel : public ValidityPanel {
 			m_propScnDy->SetValue(WXVARIANT(y));
 		}
 
-		void setRoi(emsphinx::RoiSelection& roi) {
+		void setRoi(emsphinx::RoiSelection const & roi) {
 			m_propRoi->SetValue(WXVARIANT(wxString(roi.to_string())));
 		}
 
@@ -176,65 +174,85 @@ class EbsdSummaryPanel : public ValidityPanel {
 			m_propQual    ->SetValue(WXVARIANT(ci ));
 		}
 
-		void setNamelist(emsphinx::ebsd::Namelist* nml) {
-			m_nml = nml;
-			setIdx(nml->bw, nml->normed, nml->refine);
-			setScnDims(nml->scanDims[0], nml->scanDims[1], nml->scanSteps[0], nml->scanSteps[1]);
-			setRoi(nml->roi);
-			setPatDims(nml->patDims[0], nml->patDims[1]);
-			setPctr(nml->pctr[0], nml->pctr[1], nml->pctr[2], nml->ven);
-			setImPrc(nml->circRad, nml->gausBckg, nml->nRegions);
-			setTltDlt(nml->thetac, nml->delta);
-			setInputs(nml->masterFiles, nml->patFile, nml->patName);
-			setOutputs(nml->dataFile, nml->vendorFile, nml->ipfName, nml->qualName);
+		void setNamelist(emsphinx::ebsd::Namelist const & nml) {
+			setIdx(nml.bw, nml.normed, nml.refine);
+			setScnDims(nml.scanDims[0], nml.scanDims[1], nml.scanSteps[0], nml.scanSteps[1]);
+			setRoi(nml.roi);
+			setPatDims(nml.patDims[0], nml.patDims[1]);
+			setPctr(nml.pctr[0], nml.pctr[1], nml.pctr[2], nml.ven);
+			setImPrc(nml.circRad, nml.gausBckg, nml.nRegions);
+			setTltDlt(nml.thetac, nml.delta);
+			setInputs(nml.masterFiles, nml.patFile, nml.patName);
+			setOutputs(nml.dataFile, nml.vendorFile, nml.ipfName, nml.qualName);
 		}
 
-		void updateNamelist() {
-			if(NULL == m_nml) return;
-			m_nml->bw     = m_propBw ->DoGetValue().GetLong();
-			m_nml->normed = m_propNrm->DoGetValue().GetBool();
-			m_nml->refine = m_propRef->DoGetValue().GetBool();
+		bool updateNamelist(emsphinx::ebsd::Namelist* nml) const {
+			bool chg = false;
+			long        vLong;
+			bool        vBool;
+			double      vDoub;
+			std::string vStr ;
 
-			m_nml->scanDims [0] = m_propScnW ->DoGetValue().GetLong  ();
-			m_nml->scanDims [1] = m_propScnH ->DoGetValue().GetLong  ();
-			m_nml->scanSteps[0] = m_propScnDx->DoGetValue().GetDouble();
-			m_nml->scanSteps[1] = m_propScnDy->DoGetValue().GetDouble();
+			vLong = m_propBw  ->DoGetValue().GetLong   (); if(vLong != nml->bw          ) {chg = true; nml->bw           = vLong;}
+			vBool = m_propNrm ->DoGetValue().GetBool   (); if(vBool != nml->normed      ) {chg = true; nml->normed       = vBool;}
+			vBool = m_propRef ->DoGetValue().GetBool   (); if(vBool != nml->refine      ) {chg = true; nml->refine       = vBool;}
 
-			m_nml->roi.from_string(m_propRoi->DoGetValue().GetString().ToStdString());
+			vLong = m_propScnW ->DoGetValue().GetLong  (); if(vLong != nml->scanDims [0]) {chg = true; nml->scanDims [0] = vLong;}
+			vLong = m_propScnH ->DoGetValue().GetLong  (); if(vLong != nml->scanDims [1]) {chg = true; nml->scanDims [1] = vLong;}
+			vDoub = m_propScnDx->DoGetValue().GetDouble(); if(vDoub != nml->scanSteps[0]) {chg = true; nml->scanSteps[0] = vDoub;}
+			vDoub = m_propScnDy->DoGetValue().GetDouble(); if(vDoub != nml->scanSteps[1]) {chg = true; nml->scanSteps[1] = vDoub;}
 
-			m_nml->patDims[0] = m_propPatW->DoGetValue().GetLong();
-			m_nml->patDims[1] = m_propPatH->DoGetValue().GetLong();
+			vStr = m_propRoi->DoGetValue().GetString().ToStdString(); if(vStr != nml->roi.to_string()) {chg = true; nml->roi.from_string(vStr);}
 
-			m_nml->pctr[0] = m_propPcenX->DoGetValue().GetDouble();
-			m_nml->pctr[1] = m_propPcenY->DoGetValue().GetDouble();
-			m_nml->pctr[2] = m_propPcenZ->DoGetValue().GetDouble();
+			vLong = m_propPatW->DoGetValue().GetLong   (); if(vLong != nml->patDims  [0]) {chg = true; nml->patDims  [0] = vLong;}
+			vLong = m_propPatH->DoGetValue().GetLong   (); if(vLong != nml->patDims  [1]) {chg = true; nml->patDims  [1] = vLong;}
+
+			vDoub = m_propPcenX->DoGetValue().GetDouble(); if(vDoub != nml->pctr     [0]) {chg = true; nml->pctr     [0] = vDoub;}
+			vDoub = m_propPcenY->DoGetValue().GetDouble(); if(vDoub != nml->pctr     [1]) {chg = true; nml->pctr     [1] = vDoub;}
+			vDoub = m_propPcenZ->DoGetValue().GetDouble(); if(vDoub != nml->pctr     [2]) {chg = true; nml->pctr     [2] = vDoub;}
 			switch(m_propVen->DoGetValue().GetLong()) {
-				case 0: m_nml->ven = "EMsoft"; break;
-				case 1: m_nml->ven = "Bruker"; break;
-				case 2: m_nml->ven = "Edax"  ; break;
-				case 3: m_nml->ven = "Oxford"; break;
+				case 0: vStr = "EMsoft"; break;
+				case 1: vStr = "Bruker"; break;
+				case 2: vStr = "Edax"  ; break;
+				case 3: vStr = "Oxford"; break;
 			}
+			if(vStr != nml->ven) {chg = true; nml->ven = vStr;}
 
-			m_nml->circRad  = m_propCirc->DoGetValue().GetLong();
-			m_nml->gausBckg = m_propBckg->DoGetValue().GetBool();
-			m_nml->nRegions = m_propNreg->DoGetValue().GetLong();
+			vLong = m_propCirc ->DoGetValue().GetLong  (); if(vLong != nml->circRad     ) {chg = true; nml->circRad      = vLong;}
+			vBool = m_propBckg ->DoGetValue().GetBool  (); if(vBool != nml->gausBckg    ) {chg = true; nml->gausBckg     = vBool;}
+			vLong = m_propNreg ->DoGetValue().GetLong  (); if(vLong != nml->nRegions    ) {chg = true; nml->nRegions     = vLong;}
 
-			m_nml->thetac   = m_propThtC->DoGetValue().GetDouble();
-			m_nml->delta    = m_propDlt ->DoGetValue().GetDouble();
+			vDoub = m_propThtC ->DoGetValue().GetDouble(); if(vDoub != nml->thetac      ) {chg = true; nml->thetac       = vDoub;}
+			vDoub = m_propDlt  ->DoGetValue().GetDouble(); if(vDoub != nml->delta       ) {chg = true; nml->delta        = vDoub;}
 
 			wxArrayString arr = m_propMP    ->DoGetValue().GetArrayString();
-			m_nml->patFile    = m_propPatFile ->DoGetValue().GetString().ToStdString();
-			m_nml->patName    = m_propPatDset ->DoGetValue().GetString().ToStdString();
-			m_nml->masterFiles.clear();
-			for(size_t i = 0; i < arr.GetCount(); i++) m_nml->masterFiles.push_back(arr[i].ToStdString());
+			bool sameMp = arr.GetCount() == nml->masterFiles.size();
+			if(sameMp) {
+				for(size_t i = 0; i < arr.GetCount(); i++) {
+					if(nml->masterFiles[i] != arr[i].ToStdString()) {
+						sameMp = false;
+						break;
+					}
+				}
+			}
+			if(!sameMp) {
+				chg = true;
+				nml->masterFiles.clear();
+				for(size_t i = 0; i < arr.GetCount(); i++) nml->masterFiles.push_back(arr[i].ToStdString());
+			}
+			
+			vStr  = m_propPatFile->DoGetValue().GetString().ToStdString(); if(vStr != nml->patFile) {chg = true; nml->patFile = vStr;}
+			vStr  = m_propPatDset->DoGetValue().GetString().ToStdString(); if(vStr != nml->patName) {chg = true; nml->patName = vStr;}
 
-			m_nml->dataFile   = m_propDatafile->DoGetValue().GetString().ToStdString();
-			m_nml->vendorFile = m_propVenFile ->DoGetValue().GetString().ToStdString();
-			m_nml->ipfName    = m_propIpf     ->DoGetValue().GetString().ToStdString();
-			m_nml->qualName   = m_propQual    ->DoGetValue().GetString().ToStdString();
+			vStr = m_propDatafile->DoGetValue().GetString().ToStdString(); if(vStr != nml->dataFile  ) {chg = true; nml->dataFile   = vStr;}
+			vStr = m_propVenFile ->DoGetValue().GetString().ToStdString(); if(vStr != nml->vendorFile) {chg = true; nml->vendorFile = vStr;}
+			vStr = m_propIpf     ->DoGetValue().GetString().ToStdString(); if(vStr != nml->ipfName   ) {chg = true; nml->ipfName    = vStr;}
+			vStr = m_propQual    ->DoGetValue().GetString().ToStdString(); if(vStr != nml->qualName  ) {chg = true; nml->qualName   = vStr;}
 
-			m_nml->nThread   = m_propThd  ->DoGetValue().GetLong();
-			m_nml->batchSize = m_propBatSz->DoGetValue().GetLong();
+			vLong = m_propThd  ->DoGetValue().GetLong(); if(vLong !=  nml->nThread  ) {chg = true;  nml->nThread   = vLong;}
+			vLong = m_propBatSz->DoGetValue().GetLong(); if(vLong !=  nml->batchSize) {chg = true;  nml->batchSize = vLong;}
+
+			return chg;
 		}
 
 		void EnableEditing(const bool enb) {

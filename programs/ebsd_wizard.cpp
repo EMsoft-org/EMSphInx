@@ -40,12 +40,12 @@ class MyApp: public wxApp {
 
 IMPLEMENT_APP(MyApp)
 
-#include "wx/EbsdNamelistWizard.h"
+#include "wx/IndexingFrame.h"
 
 #include "sphinx.xpm"
 
 bool MyApp::OnInit() {
-    EbsdNamelistWizard* wizard = new EbsdNamelistWizard(NULL);
+    IndexingFrame* frame = new IndexingFrame(NULL);
 
 #if defined(WIN32) || defined(_WIN32) || defined(__WIN32) && !defined(__CYGWIN__)
     static const bool setIcon = true;
@@ -56,8 +56,8 @@ bool MyApp::OnInit() {
 	    static const bool setIcon = true;
     #endif
 #endif
-    if(setIcon) wizard->SetIcon( wxICON(sphinx) );
+    if(setIcon) frame->SetIcon( wxICON(sphinx) );
     
-    wizard->Show();
+    frame->Show();
 	return true;
 }

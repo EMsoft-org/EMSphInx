@@ -61,9 +61,6 @@
 
 #include "ValidityWizard.h"
 
-#include "BibtexDialog.h"
-#include "IndexingFrame.h"
-
 ///////////////////////////////////////////////////////////////////////////
 
 #include "util/sysnames.hpp" // could also use wxStandardPaths
@@ -87,40 +84,6 @@ class EbsdNamelistWizard : public ValidityWizard
 		ScanDimsPanel           * m_scnDimPan    ;
 		IdxParamPanel           * m_idxPrmPan    ;
 		EbsdSummaryPanel        * m_ebsdSumPan   ;
-
-		virtual void OnNext( wxCommandEvent& event ) {
-			if(5 == m_book->GetSelection()) {
-				wxMessageDialog dlg(this, "Namelist Complete", "", wxYES_NO|wxCANCEL|wxCENTRE|wxICON_QUESTION);
-				dlg.SetYesNoLabels ("Index Now", "Export Namelist");
-				int res = dlg.ShowModal();
-
-				if(wxID_NO == res) {//save namelist file
-					wxFileDialog svDlg(this, _("Save Namelist file"), "", "", "Namelist files (*.nml)|*.nml", wxFD_SAVE|wxFD_OVERWRITE_PROMPT);
-					if(svDlg.ShowModal() == wxID_CANCEL) return;//cancel
-					std::ofstream os(svDlg.GetPath().ToStdString());
-					os << nml.to_string();
-				} else if(wxID_YES == res) {
-					//create indexing window
-					// Close();
-					IndexingFrame* frm = new IndexingFrame(NULL);
-					frm->setNml(nml);
-					wxImage wim = m_scnDimPan->getMap();
-					frm->setImage(wim);
-					frm->Show();
-					// return;
-				} else {//don't do anything on wxID_CANCEL
-					return;
-				}
-
-				//if we made it this far everything made it, ask users to cite papers
-				if(!wxFileExists(getUserAppDataDir() + "silenced")) {
-					BibtexDialog bDlg(this);
-					bDlg.ShowModal();
-					if(bDlg.Silence()) std::ofstream os(getUserAppDataDir() + "silenced");
-				}
-			}
-			ValidityWizard::OnNext(event);
-		}
 
 		virtual void PageChanging( wxBookCtrlEvent& event ) {
 			switch(event.GetOldSelection()) {//what page are we leaving
@@ -174,7 +137,7 @@ class EbsdNamelistWizard : public ValidityWizard
 			}
 
 			if(5 == event.GetSelection()) {
-				m_ebsdSumPan->setNamelist(&nml);
+				m_ebsdSumPan->setNamelist(nml);
 			}
 		}
 
@@ -199,6 +162,10 @@ class EbsdNamelistWizard : public ValidityWizard
 		}
 
 	public:
+
+		wxImage getMap() const {return m_scnDimPan->getMap();}
+		emsphinx::ebsd::Namelist const & getNamelist() const {return nml;}
+		void setNamelist(emsphinx::ebsd::Namelist& n);
 
 		EbsdNamelistWizard( wxWindow* parent, wxWindowID id = wxID_ANY, const wxString& title = wxT("EBSD Indexing Wizard"), const wxBitmap& bitmap = wxNullBitmap, const wxPoint& pos = wxDefaultPosition, long style = wxDEFAULT_DIALOG_STYLE );
 		~EbsdNamelistWizard();
@@ -262,6 +229,44 @@ EbsdNamelistWizard::~EbsdNamelistWizard() {
 		config.Write(ss.str(), masterLib[i]);
 	}
 	config.Flush();
+}
+
+void EbsdNamelistWizard::setNamelist(emsphinx::ebsd::Namelist& n) {
+	//set pattern file
+	wxFileName fn(n.ipath + n.patFile);
+	m_patLoadPan->setAux(n.patName);
+	m_patLoadPan->SetFile(fn);
+	if(!m_patLoadPan->hasW()) m_patLoadPan->setW(n.patDims[0]);
+	if(!m_patLoadPan->hasH()) m_patLoadPan->setH(n.patDims[1]);
+	m_patLoadPan->setCirc(n.circRad );
+	m_patLoadPan->setBckg(n.gausBckg);
+	m_patLoadPan->setNreg(n.nRegions);
+
+	m_patCenPan->setPatternCenter(n.pctr[0], n.pctr[1], n.pctr[2], n.ven);//this needs to be first (clears everything else)
+	m_patCenPan->setBinnedPix(n.patDims[0], n.patDims[1]);//this needs to be before delta
+	m_patCenPan->setDelta(n.delta);
+	m_patCenPan->setDetTlt(n.thetac);
+
+	m_scnDimPan->setW(n.scanDims[0]);
+	m_scnDimPan->setH(n.scanDims[1]);
+	m_scnDimPan->setX(n.scanSteps[0]);
+	m_scnDimPan->setY(n.scanSteps[1]);
+	m_scnDimPan->setRoi(n.roi);
+
+	std::shared_ptr< std::vector<float> > ciMap = std::make_shared< std::vector<float> >();
+	std::shared_ptr< std::vector<float> > iqMap = std::make_shared< std::vector<float> >();
+	nml.findScanFile(iqMap.get(), ciMap.get());
+	m_scnDimPan->setMaps(iqMap, ciMap, m_patLoadPan->getNum());//set maps (empty or not) + pattern count
+
+	m_idxPrmPan->setBw        (n.bw                  );
+	m_idxPrmPan->setNorm      (n.normed              );
+	m_idxPrmPan->setRef       (n.refine              );
+	m_idxPrmPan->setDataFile  (n.opath + n.dataFile  );
+	m_idxPrmPan->setVendorFile(n.opath + n.vendorFile);
+	m_idxPrmPan->setIpfFile   (n.opath + n.ipfName   );
+	m_idxPrmPan->setCiFile    (n.opath + n.qualName  );
+
+	nml = n;
 }
 
 #endif//_EBSD_WIZARD_H

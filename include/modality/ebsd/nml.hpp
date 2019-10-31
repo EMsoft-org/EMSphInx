@@ -321,21 +321,27 @@ namespace emsphinx {
 			ss << "! Input Files\n";
 			ss << "!#################################################################\n";
 			ss << "\n";
-			ss << "! input path, empty for current working directory\n";
-			ss << " ipath      = '" << ipath << "',\n";//ignored for fortran version
-			ss << "\n";
+			if(!ipath.empty()) {
+				ss << "! input path, empty for current working directory\n";
+				ss << " ipath      = '" << ipath << "',\n";//ignored for fortran version
+				ss << "\n";
+			}
 			ss << "! raw pattern file (relative to ipath) [can be up1, up2, or hdf5]\n";
 			ss << " patfile    = '" << patFile << "',\n";
 			ss << "\n";
-			ss << "! h5 path of raw pattern  (ignored for non hdf5 patfile)\n";
-			ss << " patdset    = '" << patName << "',\n";
-			ss << "\n";
+			if(!patName.empty()) {
+				ss << "! h5 path of raw pattern  (ignored for non hdf5 patfile)\n";
+				ss << " patdset    = '" << patName << "',\n";
+				ss << "\n";
+			}
 			ss << "! master pattern with phases to index (relative to ipath)\n";
 			ss << " masterfile = "; for(const std::string& str : masterFiles) ss << '\'' << str << "', "; ss << '\n';
 			ss << "\n";
-			ss << "! file with list of pseudo symmetric rotations to check (or '' for no psym check)\n";
-			ss << " psymfile   = '" << pSymFile << "',\n";
-			ss << "\n";
+			if(!pSymFile.empty()) {
+				ss << "! file with list of pseudo symmetric rotations to check (or '' for no psym check)\n";
+				ss << " psymfile   = '" << pSymFile << "',\n";
+				ss << "\n";
+			}
 			ss << "\n";
 			ss << "!#################################################################\n";
 			ss << "! Pattern Processing\n";
@@ -387,9 +393,11 @@ namespace emsphinx {
 			ss << "! string to read dimensions from a scan file (*.ang, *.ctf, or *.h5)\n";
 			ss << " scandims   = " << scanDims[0] << ", " << scanDims[1] << ", " << scanSteps[0] << ", " << scanSteps[1] << ",\n";//fortran version can't be string
 			ss << "\n";
-			ss << "! h5 path of scan data folder if scandims is an h5 file (ignored otherwise)\n";
-			ss << " scanname   = '',\n";//N/A for fortran version
-			ss << "\n";
+			if(!scanName.empty()) {
+				ss << "! h5 path of scan data folder if scandims is an h5 file (ignored otherwise)\n";
+				ss << " scanname   = '" << scanName << "',\n";//N/A for fortran version
+				ss << "\n";
+			}
 			ss << "! region of interest for indexing\n";
 			ss << "! 0 (or omitted) to index the entire scan\n";
 			ss << "! x0, y0, dx, dy for a (dx, dy) rectangular starting at pixel (x0, y0)\n";
@@ -432,21 +440,29 @@ namespace emsphinx {
 			ss << "! Output Files\n";
 			ss << "!#################################################################\n";
 			ss << "\n";
-			ss << "! output path, empty for current working directory\n";
-			ss << " opath      = '" << opath << "',\n";//ignored for fortran version
-			ss << "\n";
+			if(!opath.empty()) {
+				ss << "! output path, empty for current working directory\n";
+				ss << " opath      = '" << opath << "',\n";//ignored for fortran version
+				ss << "\n";
+			}
 			ss << "! output orientation map name relative to opath [must be hdf5 type]\n";
 			ss << " datafile   = '" << dataFile << "',\n"; //should be hdf
 			ss << "\n";
-			ss << "! output orientation map name relative to opath (or omitted for no vendor output) [can be ang or ctf]\n";
-			ss << " vendorfile = '" << vendorFile << "',\n"; //should be hdf
-			ss << "\n";
-			ss << "! output ipf map with {0,0,1} reference direction (or omitted for no ipf map) [must be png]\n";
-			ss << " ipfmap     = '" << ipfName << "',\n";
-			ss << "\n";
-			ss << "! output quality map with (or omitted for no quality map) [must be png]\n";
-			ss << " qualmap    = '" << qualName << "'\n";
-			ss << " /\n";
+			if(!vendorFile.empty()) {
+				ss << "! output orientation map name relative to opath (or omitted for no vendor output) [can be ang or ctf]\n";
+				ss << " vendorfile = '" << vendorFile << "',\n"; //should be hdf
+				ss << "\n";
+			}
+			if(!ipfName.empty()) {
+				ss << "! output ipf map with {0,0,1} reference direction (or omitted for no ipf map) [must be png]\n";
+				ss << " ipfmap     = '" << ipfName << "',\n";
+				ss << "\n";
+			}
+			if(!qualName.empty()) {
+				ss << "! output quality map with (or omitted for no quality map) [must be png]\n";
+				ss << " qualmap    = '" << qualName << "'\n";
+				ss << " /\n";
+			}
 			return ss.str();
 		}
 

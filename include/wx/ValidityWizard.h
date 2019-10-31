@@ -94,6 +94,8 @@ class ValidityWizard : public wxFrame
 
 		~ValidityWizard();
 
+		bool isFinished() {return m_finished;}
+
 };
 
 
@@ -154,6 +156,8 @@ void ValidityWizard::AddPage(ValidityPanel* panel) {
 
 ValidityWizard::ValidityWizard( wxWindow* parent, wxWindowID id, const wxString& title, const wxPoint& pos) : wxFrame( parent, id, title, pos, wxSize( 325,350 ), wxCAPTION|wxCLOSE_BOX|wxSYSTEM_MENU|wxTAB_TRAVERSAL )
 {
+	if(NULL != parent) parent->Enable(false);//approximate modal behavoir
+
 	this->SetSizeHints( wxDefaultSize, wxDefaultSize );
 
 	wxBoxSizer* bSizer;
@@ -219,6 +223,8 @@ ValidityWizard::ValidityWizard( wxWindow* parent, wxWindowID id, const wxString&
 
 ValidityWizard::~ValidityWizard()
 {
+	if(NULL != m_parent) m_parent->Enable(true);//approximate modal behavoir
+
 	// Disconnect Events
 	m_book->Disconnect( wxEVT_COMMAND_BOOKCTRL_PAGE_CHANGED, wxBookCtrlEventHandler( ValidityWizard::PageChanged ), NULL, this );
 	m_book->Disconnect( wxEVT_COMMAND_BOOKCTRL_PAGE_CHANGING, wxBookCtrlEventHandler( ValidityWizard::PageChanging ), NULL, this );

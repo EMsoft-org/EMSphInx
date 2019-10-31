@@ -35,6 +35,17 @@
 #ifndef _IDX_FRAME_H
 #define _IDX_FRAME_H
 
+#include <wx/artprov.h>
+#include <wx/xrc/xmlres.h>
+#include <wx/string.h>
+#include <wx/bitmap.h>
+#include <wx/image.h>
+#include <wx/icon.h>
+#include <wx/menu.h>
+#include <wx/gdicmn.h>
+#include <wx/font.h>
+#include <wx/colour.h>
+#include <wx/settings.h>
 #include <wx/sizer.h>
 #include <wx/gauge.h>
 #include <wx/button.h>
@@ -46,6 +57,8 @@
 
 #include "ImagePanel.h"
 #include "EbsdSummaryPanel.h"
+#include "EbsdNamelistWizard.h"
+#include "BibtexDialog.h"
 
 #include "modality/ebsd/nml.hpp"
 #include "modality/ebsd/idx.hpp"
@@ -75,20 +88,34 @@ class IndexingFrame : public wxFrame {
 			IdxCmplt =  101,
 		};
 
-
 	protected:
-		wxSplitterWindow* m_split  ;
-		wxImagePanel    * m_imPan  ;
-		EbsdSummaryPanel* m_sumPan ;
-		wxGauge         * m_prog   ;
-		wxButton        * m_btn    ;
-		wxStatusBar     * m_statBar;
+		wxMenuBar       * m_menubar ;
+		wxMenu          * m_menuFile;
+		wxMenu          * m_menuHelp;
+		wxSplitterWindow* m_split   ;
+		wxImagePanel    * m_imPan   ;
+		EbsdSummaryPanel* m_sumPan  ;
+		wxGauge         * m_prog    ;
+		wxButton        * m_btn     ;
+		wxStatusBar     * m_statBar ;
 
+		//@brief: menu item functions
+		virtual void OnFileOpen  ( wxCommandEvent& event ) { loadNamelist(); }
+		virtual void OnFileLoad  ( wxCommandEvent& event ) { saveNamelist(); }
+		virtual void OnFileWizard( wxCommandEvent& event ) { runWizard   (); }
+		virtual void OnHelpAbout ( wxCommandEvent& event ) { showAbout   (); }
+		virtual void OnHelpRefs  ( wxCommandEvent& event ) { showRefs    (); }
+		virtual void OnHelpHelp  ( wxCommandEvent& event ) { showHelp    (); }
+
+		void WizardClosed(wxCloseEvent& event);
+
+		//@brief: action for start/stop button click
 		virtual void OnBtn( wxCommandEvent& event ) {
 			if("Start" == m_btn->GetLabel()) startIdx();
 			else stopIdx();
 		}
 
+		//@brief: action for indexing thread updates
 		void OnThread(wxCommandEvent& event) {
 			//update the status bar and get event type
 			m_statBar->SetStatusText(event.GetString());
@@ -103,7 +130,15 @@ class IndexingFrame : public wxFrame {
 				idxThd.join();//wait for the thread to wrap up
 				m_sumPan->EnableEditing(true);//enable the parameter panel
 				m_btn->SetLabel("Start");//change stop button to a start button again
-				m_btn->Enable(true);
+				m_btn->Enable(true);\
+				if(IdxCmplt == i) {
+					//if we made it this far everything made it, ask users to cite papers
+					if(!wxFileExists(getUserAppDataDir() + "silenced")) {
+						BibtexDialog bDlg(this);
+						bDlg.ShowModal();
+						if(bDlg.Silence()) std::ofstream os(getUserAppDataDir() + "silenced");
+					}
+				}
 			} else {//status update
 				m_btn->Enable(true);
 				m_prog->SetValue(event.GetInt());//update progress bar
@@ -114,14 +149,29 @@ class IndexingFrame : public wxFrame {
 		}
 
 	public:
+		//@brief: load settings from a namelist file
+		void loadNamelist();
+
+		//@brief: save the current settings to a namelist file
+		void saveNamelist();
+
+		//@brief: run the indexing wizard
+		void runWizard();
+
+		//@brief: run the about window
+		void showAbout();
+
+		//@brief: run the references
+		void showRefs();
+
+		//@brief: show the program help
+		void showHelp();
 
 		void startIdx();
 
 		void stopIdx();
 
-		void setNml(emsphinx::ebsd::Namelist& n) {nml = n; m_sumPan->setNamelist(&nml);}
-
-		void setImage(wxImage& im) {m_imPan->setImage(im); imOrig = im; imPaint = im.Copy();}
+		void setImage(wxImage im) {m_imPan->setImage(im); imOrig = im; imPaint = im.Copy(); m_imPan->Refresh();}
 
 		IndexingFrame( wxWindow* parent, wxWindowID id = wxID_ANY, const wxString& title = "EMSphInx", const wxPoint& pos = wxDefaultPosition, const wxSize& size = wxSize( 720,540 ), long style = wxDEFAULT_FRAME_STYLE|wxTAB_TRAVERSAL );
 
@@ -143,15 +193,106 @@ END_EVENT_TABLE()
 
 ///////////////////////////////////////////////////////////////////////////
 
+#include <wx/filedlg.h>
+
 DEFINE_EVENT_TYPE(wxEVT_IndexingThread)
 
+//@brief: load settings from a namelist file
+void IndexingFrame::loadNamelist() {
+	wxFileDialog opDlg(this, _("Load Namelist file"), "", "", "Namelist files (*.nml)|*.nml", wxFD_OPEN|wxFD_FILE_MUST_EXIST);
+	if(opDlg.ShowModal() == wxID_CANCEL) return;//cancel
+
+	//read nml and parse
+	try {
+		std::ifstream is(opDlg.GetPath().ToStdString());//open file
+		std::string str((std::istreambuf_iterator<char>(is)), std::istreambuf_iterator<char>());//read entire thing into string
+		std::string warning = nml.from_string(str);//parse namelist
+		m_sumPan->setNamelist(nml);
+		if(!warning.empty()) {//display any warnings
+			wxMessageDialog msgDlg(this, "unused parameters: " + warning, "Warnings Parsing Namelist");
+			msgDlg.ShowModal();//make sure user sees message (since it will be overwritten with "Indexing Stopped")
+		}
+	} catch (std::exception& e) {
+		nml.clear();
+		wxMessageDialog msgDlg(this, e.what(), "Error Reading Namelist");
+		msgDlg.ShowModal();//make sure user sees message (since it will be overwritten with "Indexing Stopped")
+	}
+}
+
+//@brief: save the current settings to a namelist file
+void IndexingFrame::saveNamelist() {
+	wxFileDialog svDlg(this, _("Save Namelist file"), "", "", "Namelist files (*.nml)|*.nml", wxFD_SAVE|wxFD_OVERWRITE_PROMPT);
+	if(svDlg.ShowModal() == wxID_CANCEL) return;//cancel
+	std::ofstream os(svDlg.GetPath().ToStdString());
+	os << nml.to_string();
+}
+
+//@brief: run the indexing wizard
+void IndexingFrame::runWizard() {
+	EbsdNamelistWizard* wizard = new EbsdNamelistWizard(this);
+	wizard->setNamelist(nml);
+	wizard->Show();
+	wizard->Connect( wxEVT_CLOSE_WINDOW, wxCloseEventHandler( IndexingFrame::WizardClosed ), NULL, this );
+}
+
+void IndexingFrame::WizardClosed(wxCloseEvent& event) {
+	EbsdNamelistWizard* wizard = (EbsdNamelistWizard*) event.GetEventObject();
+std::cout << "wizard closed " << wizard << std::endl;
+	if(wizard->isFinished()) {
+		m_sumPan->setNamelist(wizard->getNamelist());
+		nml = wizard->getNamelist();
+		wxImage im = wizard->getMap();
+		setImage(im);
+	} else {
+		std::cout << "cancel\n";
+	}
+	event.Skip();
+}
+
+//@brief: run the about window
+void IndexingFrame::showAbout() {
+
+}
+
+//@brief: run the references
+void IndexingFrame::showRefs() {
+
+}
+
+//@brief: show the program help
+void IndexingFrame::showHelp() {
+
+}
+
 void IndexingFrame::startIdx() {
-	imPaint = imOrig.Copy();
+	//update namelist
 	m_sumPan->EnableEditing(false);//disable the parameter panel
-	m_sumPan->updateNamelist();
+	if(m_sumPan->updateNamelist(&nml)) nml.namelistFile.clear();
+
+	//make sure we have a scan (most parameters are sanity checked during indexing, but rescaling an empty image throws)
+	if(nml.scanDims[0] < 1 || nml.scanDims[1] < 1) {
+		wxMessageDialog msgDlg(this, "Empty scan (0 pixels)", "Error Indexing");
+		msgDlg.ShowModal();//make sure user sees message (since it will be overwritten with "Indexing Stopped")
+		m_sumPan->EnableEditing(true);//disable the parameter panel
+		return;
+	}
+
+	//make sure the image is the right size
+	bool ok = imOrig.IsOk();
+	if( !imOrig.IsOk() || imOrig.GetWidth() != nml.scanDims[0] || imOrig.GetHeight() != nml.scanDims[1]) {
+		imOrig = wxImage (nml.scanDims[0], nml.scanDims[1]);
+		imOrig.SetAlpha();
+		unsigned char* pAlpha = imOrig.GetAlpha();
+		std::fill(pAlpha, pAlpha + nml.scanDims[0] * nml.scanDims[1], 0xFF);
+		setImage(imOrig);
+	}
+
+	//update gui
+	imPaint = imOrig.Copy();
 	m_btn->SetLabel("Stop");//change start button to stop button
 	m_btn->Enable(false);
 
+	//start indexing thread
 	flg.test_and_set();
 	idxThd = std::thread([&](){
 		//create event for dispatching
@@ -256,6 +397,41 @@ void IndexingFrame::stopIdx() {
 IndexingFrame::IndexingFrame( wxWindow* parent, wxWindowID id, const wxString& title, const wxPoint& pos, const wxSize& size, long style ) : wxFrame( parent, id, title, pos, size, style ) {
 	this->SetSizeHints( wxDefaultSize, wxDefaultSize );
 
+	//build menus
+	m_menubar  = new wxMenuBar( 0 );
+	m_menuFile = new wxMenu();
+	m_menuHelp = new wxMenu();
+
+	//build menu items
+	wxMenuItem* m_menuFileOpen   = new wxMenuItem( m_menuFile, wxID_ANY, wxString( wxT("Open..."     ) ) + wxT('\t') + wxT("ctrl+o"), wxString( wxT("load a namelist file"  ) ), wxITEM_NORMAL );
+	wxMenuItem* m_menuFileSaveAs = new wxMenuItem( m_menuFile, wxID_ANY, wxString( wxT("Save As..."  ) ) + wxT('\t') + wxT("ctrl+s"), wxString( wxT("export a namelist file") ), wxITEM_NORMAL );
+	wxMenuItem* m_menuFileWizard = new wxMenuItem( m_menuFile, wxID_ANY, wxString( wxT("Wizard..."   ) ) + wxT('\t') + wxT("ctrl+w"), wxString( wxT("launch nml builder"    ) ), wxITEM_NORMAL );
+	wxMenuItem* m_menuHelpAbout  = new wxMenuItem( m_menuHelp, wxID_ANY, wxString( wxT("About..."    ) )                            , wxString( wxT("about this software"   ) ), wxITEM_NORMAL );
+	wxMenuItem* m_menuHelpRefs   = new wxMenuItem( m_menuHelp, wxID_ANY, wxString( wxT("Citations...") )                            , wxString( wxT("relevant literature"   ) ), wxITEM_NORMAL );
+	wxMenuItem* m_menuHelpHelp   = new wxMenuItem( m_menuHelp, wxID_ANY, wxString( wxT("Help..."     ) )                            , wxString( wxT("documentation browser" ) ), wxITEM_NORMAL );
+
+	//set menu item bitmaps
+	m_menuFileOpen  ->SetBitmap( wxArtProvider::GetBitmap( wxART_FILE_OPEN   , wxART_MENU ) );
+	m_menuFileSaveAs->SetBitmap( wxArtProvider::GetBitmap( wxART_FILE_SAVE_AS, wxART_MENU ) );
+	m_menuFileWizard->SetBitmap( wxNullBitmap                                               );
+	m_menuHelpAbout ->SetBitmap( wxArtProvider::GetBitmap( wxART_INFORMATION , wxART_MENU ) );
+	m_menuHelpRefs  ->SetBitmap( wxNullBitmap                                               );
+	m_menuHelpHelp  ->SetBitmap( wxArtProvider::GetBitmap( wxART_HELP_BOOK   , wxART_MENU ) );
+
+	//assemble file menu
+	m_menuFile->Append( m_menuFileOpen   );
+	m_menuFile->Append( m_menuFileSaveAs );
+	m_menuFile->Append( m_menuFileWizard );
+	m_menubar ->Append( m_menuFile, wxT("File") );
+
+	//assemble help menu
+	m_menuHelp->Append( m_menuHelpAbout );
+	m_menuHelp->Append( m_menuHelpRefs  );
+	m_menuHelp->Append( m_menuHelpHelp  );
+	m_menubar ->Append( m_menuHelp, wxT("Help") );
+
+	this->SetMenuBar( m_menubar );
+
 	//create splitter window
 	m_split = new wxSplitterWindow( this, wxID_ANY, wxDefaultPosition, wxDefaultSize, wxSP_3DSASH|wxSP_LIVE_UPDATE );
 	m_split->SetSashGravity( 1 );//put all growth into left side
@@ -286,7 +462,14 @@ IndexingFrame::IndexingFrame( wxWindow* parent, wxWindowID id, const wxString& t
 	m_statBar = this->CreateStatusBar( 1, wxSTB_ELLIPSIZE_END|wxSTB_SIZEGRIP, wxID_ANY );
 	this->Centre( wxBOTH );
 
+	// Connect Events
 	m_btn->Connect( wxEVT_COMMAND_BUTTON_CLICKED, wxCommandEventHandler( IndexingFrame::OnBtn ), NULL, this );
+	m_menuFile->Bind(wxEVT_COMMAND_MENU_SELECTED, wxCommandEventHandler( IndexingFrame::OnFileOpen   ), this, m_menuFileOpen  ->GetId());
+	m_menuFile->Bind(wxEVT_COMMAND_MENU_SELECTED, wxCommandEventHandler( IndexingFrame::OnFileLoad   ), this, m_menuFileSaveAs->GetId());
+	m_menuFile->Bind(wxEVT_COMMAND_MENU_SELECTED, wxCommandEventHandler( IndexingFrame::OnFileWizard ), this, m_menuFileWizard->GetId());
+	m_menuHelp->Bind(wxEVT_COMMAND_MENU_SELECTED, wxCommandEventHandler( IndexingFrame::OnHelpAbout  ), this, m_menuHelpAbout ->GetId());
+	m_menuHelp->Bind(wxEVT_COMMAND_MENU_SELECTED, wxCommandEventHandler( IndexingFrame::OnHelpRefs   ), this, m_menuHelpRefs  ->GetId());
+	m_menuHelp->Bind(wxEVT_COMMAND_MENU_SELECTED, wxCommandEventHandler( IndexingFrame::OnHelpHelp   ), this, m_menuHelpHelp  ->GetId());
 }
 
 IndexingFrame::~IndexingFrame() {
