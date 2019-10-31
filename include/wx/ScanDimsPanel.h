@@ -153,6 +153,10 @@ class ScanDimsPanel : public ValidityPanel
 		//@return: roi
 		emsphinx::RoiSelection getRoi() const {return m_roi;}
 
+		//@brief    : set the ROI
+		//@param roi: roi to set
+		void setRoi(emsphinx::RoiSelection roi) {m_roi = roi;}
+
 		//@brief: sanity check the current state
 		//@return: true if the values parsed from the panel are reasonable, false otherwise
 		//@note  : checks for has a file, has detector sizes, and has an AHE value

@@ -101,6 +101,8 @@ class PatternLoadPanelBase : public ValidityPanel {
 
 		bool getIqChecked() const {return m_checkIq->IsChecked();}
 
+		void SetFileName(wxFileName fn) {m_filePicker->SetFileName(fn);}
+
 	public:
 
 		PatternLoadPanelBase( wxWindow* parent, wxWindowID id = wxID_ANY, const wxPoint& pos = wxDefaultPosition, const wxSize& size = wxSize( 400,400 ), long style = wxTAB_TRAVERSAL, const wxString& name = wxEmptyString );
@@ -186,6 +188,8 @@ class PatternLoadPanel : public PatternLoadPanelBase {
 
 		bool validFile() const {return wxFileExists(getFile());}
 		std::string getAux() const {return aux;}
+		void setAux(std::string a) {aux = a;}
+		void SetFile(wxFileName fn) {SetFileName(fn); wxFileDirPickerEvent evt; FileChanged(evt);}
 		
 };
 

@@ -116,6 +116,34 @@ class IdxParamPanel : public ValidityPanel
 		//@return: CI file
 		wxString getCiFile() const {return m_fpCi->GetPath();}
 
+		//@brief  : set bandwidth
+		//@param v: new bandwidth
+		void setBw(int v) {m_txtBw->Clear(); m_txtBw->operator<<(v);}
+
+		//@brief  : set normalized flag
+		//@param v: new normalized flag
+		void setNorm(bool v) {m_chkNrm->SetValue(v);}
+
+		//@brief  : set refinement flag
+		//@param v: new refinement flag
+		void setRef(bool v) {m_chkRef->SetValue(v);}
+
+		//@brief  : set the data file
+		//@param v: new data file
+		void setDataFile(wxString v) {return m_fpData->SetPath(v);}
+
+		//@brief  : set the vendor file
+		//@param v: new vendor file
+		void setVendorFile(wxString v) {return m_fpVen->SetPath(v);}
+
+		//@brief  : set the ipf file
+		//@param v: new ipf file
+		void setIpfFile(wxString v) {return m_fpIpf->SetPath(v);}
+
+		//@brief : get the CI file
+		//@return: new CI file
+		void setCiFile(wxString v) {return m_fpCi->SetPath(v);}
+
 		//require bandwidth + output file
 
 		//@brief: sanity check the current state
