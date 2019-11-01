@@ -4,7 +4,7 @@ EMSphInxEBSD
 
 EMSphInxEBSD is a GUI for indexing EBSD patterns using spherical harmonics, part of the `EMSphInx`_ package.
 
-.. _EMSphInx: pip.readthedocs.io
+.. _EMSphInx: https://github.com/EMsoft-org/EMSphInx
 
 Main Window
 ------------------------------------

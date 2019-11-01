@@ -34,30 +34,44 @@
 
 #include <wx/app.h>
 
+#include "wx/IndexingFrame.h"
+
 class MyApp: public wxApp {
+	IndexingFrame* frame;
+
 	bool OnInit();
+
+	public:
+		DECLARE_EVENT_TABLE()
+
+		//@brief: event handle for OSX about menu
+		void OnAbout(wxCommandEvent& evt) {frame->showAbout();}
 };
 
 IMPLEMENT_APP(MyApp)
 
-#include "wx/IndexingFrame.h"
+BEGIN_EVENT_TABLE(MyApp, wxApp)
+	EVT_MENU(wxID_ABOUT, MyApp::OnAbout)
+END_EVENT_TABLE()
 
 #include "sphinx.xpm"
 
 bool MyApp::OnInit() {
-    IndexingFrame* frame = new IndexingFrame(NULL);
+	frame = new IndexingFrame(NULL);
 
 #if defined(WIN32) || defined(_WIN32) || defined(__WIN32) && !defined(__CYGWIN__)
-    static const bool setIcon = true;
+	static const bool setIcon = true;
 #elif __APPLE__ || __linux__ || __unix__ || defined(_POSIX_VERSION)
-    #if __APPLE__
-	    static const bool setIcon = false;//already handled by  bundle
-    #else
-	    static const bool setIcon = true;
-    #endif
+	#if __APPLE__
+		static const bool setIcon = false;//already handled by  bundle
+	#else
+		static const bool setIcon = true;
+	#endif
 #endif
-    if(setIcon) frame->SetIcon( wxICON(sphinx) );
-    
-    frame->Show();
+	if(setIcon) frame->SetIcon( wxICON(sphinx) );
+	
+	frame->Show();
+
 	return true;
 }
+

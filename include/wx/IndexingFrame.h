@@ -54,7 +54,6 @@
 #include <wx/splitter.h>
 #include <wx/progdlg.h>
 #include <wx/msgdlg.h>
-#include <wx/html/helpctrl.h>
 
 #include "ImagePanel.h"
 #include "EbsdSummaryPanel.h"
@@ -88,8 +87,6 @@ class IndexingFrame : public wxFrame {
 			IdxExit  = -  2,
 			IdxCmplt =  101,
 		};
-
-		wxHtmlHelpController help;
 
 	protected:
 		wxMenuBar       * m_menubar ;
@@ -237,14 +234,12 @@ void IndexingFrame::runWizard() {
 
 void IndexingFrame::WizardClosed(wxCloseEvent& event) {
 	EbsdNamelistWizard* wizard = (EbsdNamelistWizard*) event.GetEventObject();
-std::cout << "wizard closed " << wizard << std::endl;
 	if(wizard->isFinished()) {
 		m_sumPan->setNamelist(wizard->getNamelist());
 		nml = wizard->getNamelist();
 		wxImage im = wizard->getMap();
 		setImage(im);
 	} else {
-		std::cout << "cancel\n";
 	}
 	event.Skip();
 }
@@ -331,7 +326,9 @@ void IndexingFrame::showRefs(const bool force) {
 
 //@brief: show the program help
 void IndexingFrame::showHelp() {
-	help.Display("EMSphInxEBSD Help File");
+	if(!wxLaunchDefaultBrowser("https://emsphinx.readthedocs.io/")) {
+		wxMessageDialog msgDlg(this, "Please visit https://emsphinx.readthedocs.io/ for documentation", "Error Launching Browser");
+	}
 }
 
 void IndexingFrame::startIdx() {
@@ -473,12 +470,12 @@ IndexingFrame::IndexingFrame( wxWindow* parent, wxWindowID id, const wxString& t
 	m_menuHelp = new wxMenu();
 
 	//build menu items
-	wxMenuItem* m_menuFileOpen   = new wxMenuItem( m_menuFile, wxID_ANY, wxString( wxT("Open..."     ) ) + wxT('\t') + wxT("ctrl+o"), wxString( wxT("load a namelist file"  ) ), wxITEM_NORMAL );
-	wxMenuItem* m_menuFileSaveAs = new wxMenuItem( m_menuFile, wxID_ANY, wxString( wxT("Save As..."  ) ) + wxT('\t') + wxT("ctrl+s"), wxString( wxT("export a namelist file") ), wxITEM_NORMAL );
-	wxMenuItem* m_menuFileWizard = new wxMenuItem( m_menuFile, wxID_ANY, wxString( wxT("Wizard..."   ) ) + wxT('\t') + wxT("ctrl+w"), wxString( wxT("launch nml builder"    ) ), wxITEM_NORMAL );
-	wxMenuItem* m_menuHelpAbout  = new wxMenuItem( m_menuHelp, wxID_ANY, wxString( wxT("About..."    ) )                            , wxString( wxT("about this software"   ) ), wxITEM_NORMAL );
-	wxMenuItem* m_menuHelpRefs   = new wxMenuItem( m_menuHelp, wxID_ANY, wxString( wxT("Citations...") )                            , wxString( wxT("relevant literature"   ) ), wxITEM_NORMAL );
-	wxMenuItem* m_menuHelpHelp   = new wxMenuItem( m_menuHelp, wxID_ANY, wxString( wxT("Help..."     ) )                            , wxString( wxT("documentation browser" ) ), wxITEM_NORMAL );
+	wxMenuItem* m_menuFileOpen   = new wxMenuItem( m_menuFile, wxID_ANY  , wxString( wxT("Open..."     ) ) + wxT('\t') + wxT("ctrl+o"), wxString( wxT("load a namelist file"  ) ), wxITEM_NORMAL );
+	wxMenuItem* m_menuFileSaveAs = new wxMenuItem( m_menuFile, wxID_ANY  , wxString( wxT("Save As..."  ) ) + wxT('\t') + wxT("ctrl+s"), wxString( wxT("export a namelist file") ), wxITEM_NORMAL );
+	wxMenuItem* m_menuFileWizard = new wxMenuItem( m_menuFile, wxID_ANY  , wxString( wxT("Wizard..."   ) ) + wxT('\t') + wxT("ctrl+w"), wxString( wxT("launch nml builder"    ) ), wxITEM_NORMAL );
+	wxMenuItem* m_menuHelpAbout  = new wxMenuItem( m_menuHelp, wxID_ABOUT, wxString( wxT("About"    ) )                            , wxString( wxT("about this software"   ) ), wxITEM_NORMAL );
+	wxMenuItem* m_menuHelpRefs   = new wxMenuItem( m_menuHelp, wxID_ANY  , wxString( wxT("Citations...") )                            , wxString( wxT("relevant literature"   ) ), wxITEM_NORMAL );
+	wxMenuItem* m_menuHelpHelp   = new wxMenuItem( m_menuHelp, wxID_HELP , wxString( wxT("Help..."     ) )                            , wxString( wxT("documentation browser" ) ), wxITEM_NORMAL );
 
 	//set menu item bitmaps
 	m_menuFileOpen  ->SetBitmap( wxArtProvider::GetBitmap( wxART_FILE_OPEN   , wxART_MENU ) );
@@ -537,23 +534,12 @@ IndexingFrame::IndexingFrame( wxWindow* parent, wxWindowID id, const wxString& t
 	m_menuFile->Bind(wxEVT_COMMAND_MENU_SELECTED, wxCommandEventHandler( IndexingFrame::OnFileOpen   ), this, m_menuFileOpen  ->GetId());
 	m_menuFile->Bind(wxEVT_COMMAND_MENU_SELECTED, wxCommandEventHandler( IndexingFrame::OnFileLoad   ), this, m_menuFileSaveAs->GetId());
 	m_menuFile->Bind(wxEVT_COMMAND_MENU_SELECTED, wxCommandEventHandler( IndexingFrame::OnFileWizard ), this, m_menuFileWizard->GetId());
-	m_menuHelp->Bind(wxEVT_COMMAND_MENU_SELECTED, wxCommandEventHandler( IndexingFrame::OnHelpAbout  ), this, m_menuHelpAbout ->GetId());
+	m_menuHelp->Bind(wxEVT_COMMAND_MENU_SELECTED, wxCommandEventHandler( IndexingFrame::OnHelpAbout  ), this, wxID_ABOUT);
 	m_menuHelp->Bind(wxEVT_COMMAND_MENU_SELECTED, wxCommandEventHandler( IndexingFrame::OnHelpRefs   ), this, m_menuHelpRefs  ->GetId());
-	m_menuHelp->Bind(wxEVT_COMMAND_MENU_SELECTED, wxCommandEventHandler( IndexingFrame::OnHelpHelp   ), this, m_menuHelpHelp  ->GetId());
-
-	//setup help
-	help.UseConfig(wxConfig::Get());
-    help.SetTempDir(".");
-    // wxPathList pathlist;
-    // pathlist.Add("./helpfiles");
-    // if (help.AddBook(wxFileName(pathlist.FindValidPath("emsphinx.hhp"), wxPATH_UNIX))) wxMessageBox("Failed adding book helpfiles/testing.hhp");
-
+	m_menuHelp->Bind(wxEVT_COMMAND_MENU_SELECTED, wxCommandEventHandler( IndexingFrame::OnHelpHelp   ), this, wxID_HELP);
 }
 
 IndexingFrame::~IndexingFrame() {
-    // close the help frame if needed - this will cause the config data to
-    if( help.GetFrame() ) help.GetFrame()->Close(true);
-
 	m_btn->Disconnect( wxEVT_COMMAND_BUTTON_CLICKED, wxCommandEventHandler( IndexingFrame::OnBtn ), NULL, this );
 }
 
