@@ -1,0 +1,18 @@
+
+<h1>Parameter Wizard - Indexing Parameters </h1>
+
+<h3>Indexing Parameters</h3>
+<p>Specify the bandwidth, if normalize/unnormalized cross correlation should be used, and if newton's method based refiunement should be used.</p>
+<h5>Bandwidth</h5>
+<p>The smallest tolerable bandwidth should be used since indexing time scales as bw<sup>3</sup> * ln(bw<sup>3</sup>). The euler angle grid size is (2 * bw - 1)&lt;sup&gt;3&lt;/sup&gt; so indexing is fastest when 2 * bw - 1 is a product of small primes. Slow sizes will be padded up to the nearest fast size so in practice most sizes efficient. Here are some reasonable ideal sizes:</p>
+<ul>
+  <li>53, 63, 68, 74 - fast but somewhat noise sensitive</li>
+  <li>88, 95, 113, 123 - tradeoff between noise tolerance and speed</li>
+  <li>158, 172, 203, 221, 263 - maximum noise robustness but slow</li>
+</ul>
+<h5>Normalization</h5>
+<p>Using normalized spherical cross correlation is slightly slower but is suggested when pseudo-symmetry is anticipated or to index against multiple phases.</p>
+<h5>Refinement</h5>
+<p>Newtons method refinement add some overhead but gives maximum orientation precision. If refinement is unticked then a sub-pixel maximum will be interpolated from the 3x3x3 box surrounding the maximum in the Euler angle grid.</p>
+<h3>Output Files</h3>
+<p>An output data file is required and contains the indexing results as well as all paramter metadata. A vendor file (ang or ctf) can be optionally generated to help import results into other software packages. Finally IPF (z reference) and spherical cross correlation maps (png) can be optionally generated.</p>

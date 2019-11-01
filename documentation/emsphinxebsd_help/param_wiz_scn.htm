@@ -1,0 +1,31 @@
+
+<h1>Parameter Wizard - Scan Geometry</h1>
+
+<h3>Scan Dimensions</h3>
+<p>Specify the number or columns / rows in the EBSD map scan grid and the grid pixel size in microns</p>
+<h3>Region of Interest</h3>
+<p>A region of interest (ROI) can be used to restrict indexing to a subset of the scan. ROI building requires a grayscale map either computed or loaded during experimental pattern selection. The percentage of pixel contained in the ROI is displayed in the coverage box and the ROI can be removed (index everything) with the clear button. To draw an ROI interactively click the 'Select ROI...' button.</p>
+<h5>ROI Drawing Dialog</h5>
+<p>Select the ROI shape from the dropdown and draw a region accordingly. Pixels to index are unmodified and pixels to skip are grayed. Tick the inverted box to draw an exlusion region instead of an inclusion region. An existing ROI can be adjusted by clicking + dragging on a handle to change the shape or inside the selection to translate. If fine control on ROI positioning is needed the coordintes can be edited directly on the left.</p>
+<ul>
+  <li>Rectangle - click on origin + drag to extend (hold shift during drag for square)</li>
+  <li>Ellipse - click on bounding box origin + drag to extend (hold shift during drag for circle)</li>
+  <li>Polygon - click to start
+    <ul>
+      <li>During construction<br />
+        <ul>
+          <li>click to start / add a new point</li>
+          <li>hold shift to snap line to horizontal or vertical</li>
+          <li>press delete to remove the most recent point</li>
+          <li>right click to close shape</li>
+        </ul>
+      </li>
+      <li>After construction
+        <ul>
+          <li>right click on a point to remove it</li>
+          <li>double click on a point to duplicate it (inserted after point)</li>
+        </ul>
+      </li>
+    </ul>
+  </li>
+</ul>

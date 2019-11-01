@@ -99,5 +99,5 @@ target_link_libraries(sht2png          ${FFTW_LIBRARIES} ${HDF5_LIBRARIES})
 target_link_libraries(ShtWisdom        ${FFTW_LIBRARIES}                  )
 
 if(${EMSPHINX_BUILD_GUIS})
-	target_link_libraries(EMSphInxEBSD ${FFTW_LIBRARIES} ${HDF5_LIBRARIES} core base propgrid)
+	target_link_libraries(EMSphInxEBSD ${FFTW_LIBRARIES} ${HDF5_LIBRARIES} core base propgrid html)
 endif()

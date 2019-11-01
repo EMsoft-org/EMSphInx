@@ -1,0 +1,30 @@
+[OPTIONS]
+Compatibility=1.1
+Full-text search=Yes
+Contents file=emsphinx.hhc
+Compiled file=emsphinx.chm
+Default Window=Help
+Default topic=intro.htm
+Charset=utf-8
+Index file=emsphinx.hhk
+Title=EMSphInxEBSD
+
+[WINDOWS]
+Help=,"emsphinx.hhc","emsphinx.hhk","intro.htm",,,,,,0x2420,,0x380e,,,,,0,,,
+
+[FILES]
+intro.htm
+main_win.htm
+menu_bar.htm
+param_sum.htm
+param_wiz.htm
+param_wiz_pat.htm
+param_wiz_mp.htm
+param_wiz_det.htm
+param_wiz_scn.htm
+param_wiz_idx.htm
+param_wiz_sum.htm
+lic.htm
+lic_gpl2.htm
+lic_wx.htm
+lic_miniz.htm

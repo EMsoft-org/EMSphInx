@@ -1,0 +1,279 @@
+
+<h1>Parameter Summary Panel</h1>
+
+<p>The parameter summary panel is split into 6 sections detailed below:</p>
+<ol>
+  <li>Input files - EBSD pattern source and simulated master pattern</li>
+  <li>Pattern Processing - pattern size and image preprocessing</li>
+  <li>Camera Calibration - detector geometry description</li>
+  <li>Scan Information - orientation map dimensions and region of interest</li>
+  <li>Indexing Parameters - spherical cross correlation and threading parameters</li>
+  <li>Output Files - locations to save indexing results</li>
+</ol>
+<p>If you are uncomfortable filling parameters directly, use the wizard.</p>
+
+<h3>Input Files</h3>
+<table style="border-collapse: collapse; width: 100%; " border="1">
+	<tbody>
+		<tr>
+			<td><strong>Name</strong></td>
+			<td><strong>Type</strong></td>
+			<td><strong>Value</strong></td>
+		</tr>
+		<tr>
+			<td>patfile</td>
+			<td>file</td>
+			<td>EBSD patterns to index (<em>.up1,</em> .up2, <em>.ebsp, or</em> .h5)</td>
+		</tr>
+		<tr>
+			<td>patdset</td>
+			<td>string</td>
+			<td>path to patterns within hdf5 file (ignored for other formats)</td>
+		</tr>
+		<tr>
+			<td>masterfile</td>
+			<td>file list</td>
+			<td>spherical master pattern files to index against (.sht), first file is phase 0 in output, second file is phase 1, etc.</td>
+		</tr>
+	</tbody>
+</table>
+
+<h3><br />Pattern Processing</h3>
+<table style="border-collapse: collapse; width: 100%;" border="1">
+	<tbody>
+		<tr>
+			<td><strong>Name</strong></td>
+			<td><strong>Type</strong></td>
+			<td><strong>Value</strong></td>
+		</tr>
+		<tr>
+			<td>patdims.w</td>
+			<td>integer</td>
+			<td>width of detector in pixels</td>
+		</tr>
+		<tr>
+			<td>patdims.h</td>
+			<td>integer</td>
+			<td>height of detector in pixels</td>
+		</tr>
+		<tr>
+			<td>circmask</td>
+			<td>integer</td>
+			<td>circular mask radius (-1 for no mask, 0 for inscribed circle, &gt;0 for radius in pixels)</td>
+		</tr>
+		<tr>
+			<td>gausbckg</td>
+			<td>boolean</td>
+			<td>should a 2D gaussian background be subtracted from patterns</td>
+		</tr>
+		<tr>
+			<td>nregions</td>
+			<td>integer</td>
+			<td>number of tiles for <a href="https://doi.org/10.1016/S0734-189X(87)80186-X">adaptive histogram equalization</a> (0 for no equalization)</td>
+		</tr>
+	</tbody>
+</table>
+
+<h3>Camera Calibration</h3>
+<table style="border-collapse: collapse; width: 100%; " border="1">
+	<tbody>
+		<tr>
+			<td><strong>Name</strong></td>
+			<td><strong>Type</strong></td>
+			<td><strong>Value</strong></td>
+		</tr>
+		<tr>
+			<td>delta</td>
+			<td>real</td>
+			<td>detector pixel size in microns (i.e. patdims.w * delta is the width of the detector)</td>
+		</tr>
+		<tr>
+			<td>vendor</td>
+			<td>enum</td>
+			<td>pattern center convention (EMsoft, Bruker, EDAX, or Oxford)</td>
+		</tr>
+		<tr>
+			<td>pctr.x</td>
+			<td>real</td>
+			<td rowspan="3">pattern center calibration, see table below or refer to the <a href="https://doi.org/10.1184/R1/7792505">EMsoft tutorial paper</a> for details</td>
+		</tr>
+		<tr>
+			<td>pctr.y</td>
+			<td>real</td>
+		</tr>
+		<tr>
+			<td>pctr.z</td>
+			<td>real</td>
+		</tr>
+		<tr>
+			<td>thetac</td>
+			<td>real</td>
+			<td>camera elevation angle in degrees, refer to the <a href="https://doi.org/10.1017/S1431927613001840">EMsoft EBSD forward model paper</a> for details</td>
+		</tr>
+	</tbody>
+</table>
+
+<p>Pattern Center Conventions:</p>
+<table style="border-collapse: collapse; width: 100%; " border="1">
+	<tbody>
+		<tr>
+			<td><strong>Name</strong></td>
+			<td><strong>EMsoft</strong></td>
+			<td><strong>Bruker</strong></td>
+			<td><strong>EDAX</strong></td>
+			<td><strong>Oxford</strong></td>
+		</tr>
+		<tr>
+			<td>pctr.x</td>
+			<td>pixels</td>
+			<td>detector widths</td>
+			<td>detector widths</td>
+			<td>detector widths</td>
+		</tr>
+		<tr>
+			<td>pctr.y</td>
+			<td>pixels</td>
+			<td>detector widths</td>
+			<td>detector widths</td>
+			<td>detector heights</td>
+		</tr>
+		<tr>
+			<td>pctr.z</td>
+			<td>microns</td>
+			<td>detector heights</td>
+			<td>detector widths</td>
+			<td>detector widths</td>
+		</tr>
+		<tr>
+			<td>origin</td>
+			<td>center</td>
+			<td>top left</td>
+			<td>bottom left</td>
+			<td>bottom left</td>
+		</tr>
+	</tbody>
+</table>
+
+<h3>Scan Information</h3>
+<table style="border-collapse: collapse; width: 100%; " border="1">
+	<tbody>
+		<tr>
+			<td><strong>Name</strong></td>
+			<td><strong>Type</strong></td>
+			<td><strong>Value</strong></td>
+		</tr>
+		<tr>
+			<td>scandims.w</td>
+			<td>integer</td>
+			<td>width of scan grid in pixels</td>
+		</tr>
+		<tr>
+			<td>scandims.h</td>
+			<td>integer</td>
+			<td>height of scan grid in pixels</td>
+		</tr>
+		<tr>
+			<td>scandims.dx</td>
+			<td>real</td>
+			<td>width of grid pixel in microns</td>
+		</tr>
+		<tr>
+			<td>scandims.dy</td>
+			<td>real</td>
+			<td>height of grid pixel in microns</td>
+		</tr>
+		<tr>
+			<td>roimask</td>
+			<td>string*</td>
+			<td>string representation of region of interest to index (or empty to index everything)</td>
+		</tr>
+	</tbody>
+</table>
+
+<p>The ROI string is a series of (x,y) image coordinates (integer pixels) with 3 shapes defined:</p>
+<ol>
+  <li>Rectangle - first coordinate is origin, second coordiante is rectangle size</li>
+  <li>Ellipse - 'e' + bounding box as rectangle</li>
+  <li>Polygon - verticies in order (first/last point specified twice)</li>
+</ol>
+<p>The region of interested can be inverted (the excluded region selected instead of the included region) by prepending the string with 'i'. Here are some ROI string examples:</p>
+<ul>
+  <li>only points inside the rectangle with corners at (12, 34) and (56, 79) - "12, 34, 44, 45"</li>
+  <li>the same rectangle specified as a polygon - "12, 34, 12, 79, 56, 79, 56, 34, 12, 34"</li>
+  <li>only points outside the circle with radius 50 and center (60, 70) - "ie10, 20, 100, 100"</li>
+</ul>
+<p>If you're uncomfortable manipulating the ROI string please use the wizard.</p>
+
+<h3>Indexing Parameters</h3>
+<table style="border-collapse: collapse; width: 100%; " border="1">
+<tbody>
+<tr>
+	<td><strong>Name</strong></td>
+	<td><strong>Type</strong></td>
+	<td><strong>Value</strong></td>
+</tr>
+<tr>
+	<td>bw</td>
+	<td>integer</td>
+	<td>
+<p>Bandwidth to index with - time scales as bw<sup>3</sup> * ln(bw<sup>3</sup>) so the lowest tolerable value should be used. The euler angle grid size is (2 * bw - 1)<sup>3</sup> so indexing is fastest when 2 * bw - 1 is a product of small primes. Slow sizes will be padded up to the nearest fast size so in practice most sizes efficient. Here are some reasonable ideal sizes:</p>
+<ul>
+<li>53, 63, 68, 74 - fast but somewhat noise sensitive</li>
+<li>88, 95, 113, 123 - tradeoff between noise tolerance and speed</li>
+<li>158, 172, 203, 221, 263 - maximum noise robustness but slow</li>
+</ul>
+</td>
+</tr>
+<tr>
+	<td>normed</td>
+	<td>boolean</td>
+	<td>should normalized or unnormalized cross correlation be used for indexing - normalization is slightly slower but is suggested when pseudo-symmetry is anticipated or to index against multiple phases</td>
+</tr>
+<tr>
+	<td>refine</td>
+	<td>boolean</td>
+	<td>should newtons method refinement be used - slower but improves precision</td>
+</tr>
+<tr>
+	<td>nthread</td>
+	<td>integer</td>
+	<td>number of threads to index with (0 to determine from number of virtual cores) - performance seems to peak at ~1.5x the number of real cores</td>
+</tr>
+<tr>
+	<td>batchsize</td>
+	<td>integer</td>
+	<td>number of patterns to dispatch to a thread at once (0 to estimate a reasonable number based on bw) - extremely small values will incur additional threading overhead but large values make the 'stop' button take longer to work</td>
+</tr>
+</tbody>
+</table>
+
+<h3>Output Files</h3>
+	<table style="border-collapse: collapse; width: 100%; " border="1">
+	<tbody>
+		<tr>
+			<td><strong>Name</strong></td>
+			<td><strong>Type</strong></td>
+			<td><strong>Value</strong></td>
+		</tr>
+		<tr>
+			<td>datafile</td>
+			<td>file</td>
+			<td>location to write indexing results and meta data to (required)</td>
+		</tr>
+		<tr>
+			<td>vendorfile</td>
+			<td>file</td>
+			<td>optional location to write vendor file (.ang or .ctf)</td>
+		</tr>
+		<tr>
+			<td>ipfmap</td>
+			<td>file</td>
+			<td>optional location to write Z reference IPF map (.png)</td>
+		</tr>
+		<tr>
+			<td>qualmap</td>
+			<td>file</td>
+			<td>optional location to write (normalized) spherical cross correlation map (.png)</td>
+		</tr>
+	</tbody>
+</table>

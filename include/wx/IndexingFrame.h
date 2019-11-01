@@ -54,6 +54,7 @@
 #include <wx/splitter.h>
 #include <wx/progdlg.h>
 #include <wx/msgdlg.h>
+#include <wx/html/helpctrl.h>
 
 #include "ImagePanel.h"
 #include "EbsdSummaryPanel.h"
@@ -87,6 +88,8 @@ class IndexingFrame : public wxFrame {
 			IdxExit  = -  2,
 			IdxCmplt =  101,
 		};
+
+		wxHtmlHelpController help;
 
 	protected:
 		wxMenuBar       * m_menubar ;
@@ -254,8 +257,8 @@ void IndexingFrame::showAbout() {
 	aboutInfo.SetDescription(_("Spherical Harmonics EBSD Indexing"));
 	aboutInfo.SetCopyright("\
 EMSphInx: (C) 2019 De Graef Group, Carnegie Mellon University\n\
-crystallography: (C) 2015-20119 William C. Lenthe\n\
-utilities: (C) 2018-20119 William C. Lenthe\n\
+crystallography: (C) 2015-2019 William C. Lenthe\n\
+utilities: (C) 2018-2019 William C. Lenthe\n\
 wxWidgets: (C) 1998-2005 Julian Smart, Robert Roebling et al\n\
 FFTW: (C) 2003, 2007-11 Matteo Frigo, Massachusetts Institute of Technology\n\
 miniz: (C) 2013-2014 RAD Game Tools and Valve Software\n\
@@ -328,7 +331,7 @@ void IndexingFrame::showRefs(const bool force) {
 
 //@brief: show the program help
 void IndexingFrame::showHelp() {
-
+	help.Display("EMSphInxEBSD Help File");
 }
 
 void IndexingFrame::startIdx() {
@@ -537,9 +540,20 @@ IndexingFrame::IndexingFrame( wxWindow* parent, wxWindowID id, const wxString& t
 	m_menuHelp->Bind(wxEVT_COMMAND_MENU_SELECTED, wxCommandEventHandler( IndexingFrame::OnHelpAbout  ), this, m_menuHelpAbout ->GetId());
 	m_menuHelp->Bind(wxEVT_COMMAND_MENU_SELECTED, wxCommandEventHandler( IndexingFrame::OnHelpRefs   ), this, m_menuHelpRefs  ->GetId());
 	m_menuHelp->Bind(wxEVT_COMMAND_MENU_SELECTED, wxCommandEventHandler( IndexingFrame::OnHelpHelp   ), this, m_menuHelpHelp  ->GetId());
+
+	//setup help
+	help.UseConfig(wxConfig::Get());
+    help.SetTempDir(".");
+    // wxPathList pathlist;
+    // pathlist.Add("./helpfiles");
+    // if (help.AddBook(wxFileName(pathlist.FindValidPath("emsphinx.hhp"), wxPATH_UNIX))) wxMessageBox("Failed adding book helpfiles/testing.hhp");
+
 }
 
 IndexingFrame::~IndexingFrame() {
+    // close the help frame if needed - this will cause the config data to
+    if( help.GetFrame() ) help.GetFrame()->Close(true);
+
 	m_btn->Disconnect( wxEVT_COMMAND_BUTTON_CLICKED, wxCommandEventHandler( IndexingFrame::OnBtn ), NULL, this );
 }
 

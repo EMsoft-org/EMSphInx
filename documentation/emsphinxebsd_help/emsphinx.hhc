@@ -1,0 +1,77 @@
+<!DOCTYPE HTML PUBLIC "-//IETF//DTD HTML//EN">
+<HTML>
+<HEAD>
+<meta name="GENERATOR" content="HelpBlocks">
+<!-- Sitemap 1.0 -->
+</HEAD><BODY>
+<OBJECT type="text/site properties">
+</OBJECT>
+<UL>
+  <LI><OBJECT type="text/sitemap">
+      <param name="Name" value="Introduction">
+      <param name="Local" value="intro.htm">
+      </OBJECT>
+  <LI><OBJECT type="text/sitemap">
+      <param name="Name" value="Main Window">
+      <param name="Local" value="main_win.htm">
+      </OBJECT>
+  <UL>
+    <LI><OBJECT type="text/sitemap">
+        <param name="Name" value="Menu Bar">
+        <param name="Local" value="menu_bar.htm">
+        </OBJECT>
+    <LI><OBJECT type="text/sitemap">
+        <param name="Name" value="Parameter Summary Panel">
+        <param name="Local" value="param_sum.htm">
+        </OBJECT>
+  </UL>
+  <LI><OBJECT type="text/sitemap">
+      <param name="Name" value="Parameter Wizard">
+      <param name="Local" value="param_wiz.htm">
+      </OBJECT>
+  <UL>
+    <LI><OBJECT type="text/sitemap">
+        <param name="Name" value="Parameter Wizard - Experimental Pattern Selection">
+        <param name="Local" value="param_wiz_pat.htm">
+        </OBJECT>
+    <LI><OBJECT type="text/sitemap">
+        <param name="Name" value="Parameter Wizard - Master Pattern Selection">
+        <param name="Local" value="param_wiz_mp.htm">
+        </OBJECT>
+    <LI><OBJECT type="text/sitemap">
+        <param name="Name" value="Parameter Wizard - Detector Geometry">
+        <param name="Local" value="param_wiz_det.htm">
+        </OBJECT>
+    <LI><OBJECT type="text/sitemap">
+        <param name="Name" value="Parameter Wizard - Scan Geometry">
+        <param name="Local" value="param_wiz_scn.htm">
+        </OBJECT>
+    <LI><OBJECT type="text/sitemap">
+        <param name="Name" value="Parameter Wizard - Indexing Parameters">
+        <param name="Local" value="param_wiz_idx.htm">
+        </OBJECT>
+    <LI><OBJECT type="text/sitemap">
+        <param name="Name" value="Parameter Wizard - Summary">
+        <param name="Local" value="param_wiz_sum.htm">
+        </OBJECT>
+  </UL>
+  <LI><OBJECT type="text/sitemap">
+      <param name="Name" value="Licenses">
+      <param name="Local" value="lic.htm">
+      </OBJECT>
+  <UL>
+    <LI><OBJECT type="text/sitemap">
+        <param name="Name" value="GPL2">
+        <param name="Local" value="lic_gpl2.htm">
+        </OBJECT>
+    <LI><OBJECT type="text/sitemap">
+        <param name="Name" value="wxWidgets">
+        <param name="Local" value="lic_wx.htm">
+        </OBJECT>
+    <LI><OBJECT type="text/sitemap">
+        <param name="Name" value="miniz">
+        <param name="Local" value="lic_miniz.htm">
+        </OBJECT>
+  </UL>
+</UL>
+</BODY></HTML>
