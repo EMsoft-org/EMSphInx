@@ -92,6 +92,8 @@ class IndexingFrame : public wxFrame {
 		wxMenuBar       * m_menubar ;
 		wxMenu          * m_menuFile;
 		wxMenu          * m_menuHelp;
+		wxMenu          * m_menuEdit;
+		wxMenu          * m_menuWisd;
 		wxSplitterWindow* m_split   ;
 		wxImagePanel    * m_imPan   ;
 		EbsdSummaryPanel* m_sumPan  ;
@@ -100,12 +102,16 @@ class IndexingFrame : public wxFrame {
 		wxStatusBar     * m_statBar ;
 
 		//@brief: menu item functions
-		virtual void OnFileOpen  ( wxCommandEvent& event ) { loadNamelist(); }
-		virtual void OnFileLoad  ( wxCommandEvent& event ) { saveNamelist(); }
-		virtual void OnFileWizard( wxCommandEvent& event ) { runWizard   (); }
-		virtual void OnHelpAbout ( wxCommandEvent& event ) { showAbout   (); }
-		virtual void OnHelpRefs  ( wxCommandEvent& event ) { showRefs(true); }
-		virtual void OnHelpHelp  ( wxCommandEvent& event ) { showHelp    (); }
+		virtual void OnFileOpen   ( wxCommandEvent& event ) { loadNamelist(); }
+		virtual void OnFileLoad   ( wxCommandEvent& event ) { saveNamelist(); }
+		virtual void OnFileWizard ( wxCommandEvent& event ) { runWizard   (); }
+		virtual void OnClearWisdom( wxCommandEvent& event ) { clearWisdom (); }
+		virtual void OnBuildWisdom( wxCommandEvent& event ) { buildWisdom (); }
+		virtual void OnLoadWisdom ( wxCommandEvent& event ) { loadWisdom  (); }
+		virtual void OnSaveWisdom ( wxCommandEvent& event ) { saveWisdom  (); }
+		virtual void OnHelpAbout  ( wxCommandEvent& event ) { showAbout   (); }
+		virtual void OnHelpRefs   ( wxCommandEvent& event ) { showRefs(true); }
+		virtual void OnHelpHelp   ( wxCommandEvent& event ) { showHelp    (); }
 
 		void WizardClosed(wxCloseEvent& event);
 
@@ -151,6 +157,18 @@ class IndexingFrame : public wxFrame {
 		//@brief: run the indexing wizard
 		void runWizard();
 
+		//@brief: clear wisdom
+		void clearWisdom();
+
+		//@brief: build wisdom
+		void buildWisdom();
+
+		//@brief: load wisdom
+		void loadWisdom();
+
+		//@brief: save wisdom
+		void saveWisdom();
+
 		//@brief: run the about window
 		void showAbout();
 
@@ -189,6 +207,7 @@ END_EVENT_TABLE()
 
 #include <wx/filedlg.h>
 #include <wx/aboutdlg.h>
+#include "WisdomPrompt.h"
 #include "constants.hpp"
 #include "sht_file.hpp"
 
@@ -230,6 +249,110 @@ void IndexingFrame::runWizard() {
 	wizard->setNamelist(nml);
 	wizard->Show();
 	wizard->Connect( wxEVT_CLOSE_WINDOW, wxCloseEventHandler( IndexingFrame::WizardClosed ), NULL, this );
+}
+
+//@brief: clear wisdom
+void IndexingFrame::clearWisdom() {
+	fft::clearWisdom<double>();
+}
+
+//@brief: build wisdom
+void IndexingFrame::buildWisdom() {
+	WisdomPrompt wisDlg(this);
+	if(wxID_OK == wisDlg.ShowModal()) {
+		//get bandwidths and create progress dialog
+		std::vector<size_t> bandwidths = wisDlg.getBandwidths();//this shouldn't throws since the ok button tests it first
+		const size_t bwMax = bandwidths.back();
+		const size_t Nt = bwMax / 2 + 2;//number of rings in largest bandwidth grid
+		std::stringstream ss;
+		ss << "planning FFTs for " << Nt << " spherical grid rings";
+		wxProgressDialog ringDlg("Building FFT Wisdom", ss.str(), Nt, this, wxPD_CAN_ABORT | wxPD_APP_MODAL | wxPD_AUTO_HIDE | wxPD_ELAPSED_TIME);
+		ringDlg.Show();
+
+		//plan ffts in another thread (not a pool, planning doesn't seem to be thread safe)
+		std::atomic<size_t> prg;//counter for current progress
+		std::atomic_flag flg;//keep working flag
+		prg.store(0);
+		flg.test_and_set();
+		std::thread work([Nt,&prg,&flg](){
+			for(size_t y = 0; y < Nt; y++) {
+				fft::RealFFT<double> plan(std::max<size_t>(1, 8 * y), fft::flag::Plan::Patient);//plan the fft
+				++prg;//increment completed counter
+				if(!flg.test_and_set()) return;//cancelled
+			}
+		});
+
+		//wait for planning to finish
+		const std::chrono::milliseconds uptFreq(250);//milliseconds between updates (too long -> unresponsive, too short -> resource intensive), 0.25 ~human reaction time
+		size_t curPrg = 0;
+		while(curPrg != Nt) {
+			ss.str("");
+			ss << "planning 1D FFT for " << std::max<size_t>(1, 8 * curPrg) << " point ring";
+			if(!ringDlg.Update(curPrg, ss.str())) {
+				flg.clear();
+				work.join();
+				return;
+			}
+			curPrg = prg.load();
+		}
+		work.join();
+		ringDlg.Update(Nt);
+
+		//now do the same thing for the 3D ffts
+		ss.str("");
+		ss << "planning 3D FFTs for " << bandwidths.size() << " bandwidths";
+		wxProgressDialog euDlg("Building FFT Wisdom", ss.str(), bandwidths.size(), this, wxPD_CAN_ABORT | wxPD_APP_MODAL | wxPD_AUTO_HIDE | wxPD_ELAPSED_TIME);
+		euDlg.Show();
+
+		//plan ffts in another thread (not a pool, planning doesn't seem to be thread safe)
+		prg.store(0);
+		flg.test_and_set();
+		work = std::thread([&bandwidths,&prg,&flg](){
+			for(const size_t& bw : bandwidths) {
+				fft::SepRealFFT3D<double> plan(bw, fft::flag::Plan::Patient);
+				++prg;//increment completed counter
+				if(!flg.test_and_set()) return;//cancelled
+			}
+		});
+
+		//wait for planning to finish
+		curPrg = 0;
+		while(curPrg != bandwidths.size()) {
+			ss.str("");
+			ss << "planning 3D FFT for bandwidth " << bandwidths[curPrg];
+			if(!euDlg.Update(curPrg, ss.str())) {
+				flg.clear();
+				work.join();
+				return;
+			}
+			curPrg = prg.load();
+		}
+		work.join();
+	}
+}
+
+//@brief: load wisdom
+void IndexingFrame::loadWisdom() {
+	wxFileDialog opDlg(this, _("Import Wisdom file"), "", "", "", wxFD_OPEN|wxFD_FILE_MUST_EXIST);
+	if(opDlg.ShowModal() == wxID_CANCEL) return;//cancel
+	try {
+		fft::loadWisdom<double>(opDlg.GetPath().ToStdString().c_str());
+	} catch (std::exception& e) {
+		wxMessageDialog msgDlg(this, e.what(), "Error Importing Wisdom");
+		msgDlg.ShowModal();
+	}
+}
+
+//@brief: save wisdom
+void IndexingFrame::saveWisdom() {
+	wxFileDialog svDlg(this, _("Export Wisdom file"), "", "", "", wxFD_SAVE|wxFD_OVERWRITE_PROMPT);
+	if(svDlg.ShowModal() == wxID_CANCEL) return;//cancel
+	try {
+		fft::saveWisdom<double>(svDlg.GetPath().ToStdString().c_str());
+	} catch (std::exception& e) {
+		wxMessageDialog msgDlg(this, e.what(), "Error Exporting Wisdom");
+		msgDlg.ShowModal();
+	}
 }
 
 void IndexingFrame::WizardClosed(wxCloseEvent& event) {
@@ -328,6 +451,7 @@ void IndexingFrame::showRefs(const bool force) {
 void IndexingFrame::showHelp() {
 	if(!wxLaunchDefaultBrowser("https://emsphinx.readthedocs.io/")) {
 		wxMessageDialog msgDlg(this, "Please visit https://emsphinx.readthedocs.io/ for documentation", "Error Launching Browser");
+		msgDlg.ShowModal();
 	}
 }
 
@@ -467,20 +591,31 @@ IndexingFrame::IndexingFrame( wxWindow* parent, wxWindowID id, const wxString& t
 	//build menus
 	m_menubar  = new wxMenuBar( 0 );
 	m_menuFile = new wxMenu();
+	m_menuEdit = new wxMenu();
+	m_menuWisd = new wxMenu();
 	m_menuHelp = new wxMenu();
 
 	//build menu items
-	wxMenuItem* m_menuFileOpen   = new wxMenuItem( m_menuFile, wxID_ANY  , wxString( wxT("Open..."     ) ) + wxT('\t') + wxT("ctrl+o"), wxString( wxT("load a namelist file"  ) ), wxITEM_NORMAL );
-	wxMenuItem* m_menuFileSaveAs = new wxMenuItem( m_menuFile, wxID_ANY  , wxString( wxT("Save As..."  ) ) + wxT('\t') + wxT("ctrl+s"), wxString( wxT("export a namelist file") ), wxITEM_NORMAL );
-	wxMenuItem* m_menuFileWizard = new wxMenuItem( m_menuFile, wxID_ANY  , wxString( wxT("Wizard..."   ) ) + wxT('\t') + wxT("ctrl+w"), wxString( wxT("launch nml builder"    ) ), wxITEM_NORMAL );
-	wxMenuItem* m_menuHelpAbout  = new wxMenuItem( m_menuHelp, wxID_ABOUT, wxString( wxT("About"    ) )                            , wxString( wxT("about this software"   ) ), wxITEM_NORMAL );
-	wxMenuItem* m_menuHelpRefs   = new wxMenuItem( m_menuHelp, wxID_ANY  , wxString( wxT("Citations...") )                            , wxString( wxT("relevant literature"   ) ), wxITEM_NORMAL );
-	wxMenuItem* m_menuHelpHelp   = new wxMenuItem( m_menuHelp, wxID_HELP , wxString( wxT("Help..."     ) )                            , wxString( wxT("documentation browser" ) ), wxITEM_NORMAL );
+	wxMenuItem* m_menuWisI       = new wxMenuItem( m_menuEdit, wxID_ANY  , wxString( wxT("FFTW Wisdom"     ) )                            , wxEmptyString                              , wxITEM_NORMAL, m_menuWisd );
+	wxMenuItem* m_menuFileOpen   = new wxMenuItem( m_menuFile, wxID_ANY  , wxString( wxT("Open..."     )     ) + wxT('\t') + wxT("ctrl+o"), wxString( wxT("load a namelist file"    ) ), wxITEM_NORMAL );
+	wxMenuItem* m_menuFileSaveAs = new wxMenuItem( m_menuFile, wxID_ANY  , wxString( wxT("Save As..."  )     ) + wxT('\t') + wxT("ctrl+s"), wxString( wxT("export a namelist file"  ) ), wxITEM_NORMAL );
+	wxMenuItem* m_menuFileWizard = new wxMenuItem( m_menuFile, wxID_ANY  , wxString( wxT("Wizard..."   )     ) + wxT('\t') + wxT("ctrl+w"), wxString( wxT("launch nml builder"      ) ), wxITEM_NORMAL );
+	wxMenuItem* m_menuWisClear   = new wxMenuItem( m_menuWisd, wxID_ANY  , wxString( wxT("Clear Wisdom"    ) )                            , wxString( wxT("clear accumulated wisdom") ), wxITEM_NORMAL );
+	wxMenuItem* m_menuWisBuild   = new wxMenuItem( m_menuWisd, wxID_ANY  , wxString( wxT("Build Wisdom..." ) )                            , wxString( wxT("compute wisdom"          ) ), wxITEM_NORMAL );
+	wxMenuItem* m_menuWisImprt   = new wxMenuItem( m_menuWisd, wxID_ANY  , wxString( wxT("Import Wisdom...") )                            , wxString( wxT("load wisdom from file"   ) ), wxITEM_NORMAL );
+	wxMenuItem* m_menuWisExprt   = new wxMenuItem( m_menuWisd, wxID_ANY  , wxString( wxT("Export Wisdom...") )                            , wxString( wxT("export wisdom to file"   ) ), wxITEM_NORMAL );
+	wxMenuItem* m_menuHelpAbout  = new wxMenuItem( m_menuHelp, wxID_ABOUT, wxString( wxT("About"    )        )                            , wxString( wxT("about this software"     ) ), wxITEM_NORMAL );
+	wxMenuItem* m_menuHelpRefs   = new wxMenuItem( m_menuHelp, wxID_ANY  , wxString( wxT("Citations...")     )                            , wxString( wxT("relevant literature"     ) ), wxITEM_NORMAL );
+	wxMenuItem* m_menuHelpHelp   = new wxMenuItem( m_menuHelp, wxID_HELP , wxString( wxT("Help..."     )     )                            , wxString( wxT("documentation browser"   ) ), wxITEM_NORMAL );
 
 	//set menu item bitmaps
 	m_menuFileOpen  ->SetBitmap( wxArtProvider::GetBitmap( wxART_FILE_OPEN   , wxART_MENU ) );
 	m_menuFileSaveAs->SetBitmap( wxArtProvider::GetBitmap( wxART_FILE_SAVE_AS, wxART_MENU ) );
 	m_menuFileWizard->SetBitmap( wxNullBitmap                                               );
+	m_menuWisClear  ->SetBitmap( wxArtProvider::GetBitmap( wxART_DELETE      , wxART_MENU ) );
+	m_menuWisBuild  ->SetBitmap( wxNullBitmap                                               );
+	m_menuWisImprt  ->SetBitmap( wxArtProvider::GetBitmap( wxART_FILE_OPEN   , wxART_MENU ) );
+	m_menuWisExprt  ->SetBitmap( wxArtProvider::GetBitmap( wxART_FILE_SAVE_AS, wxART_MENU ) );
 	m_menuHelpAbout ->SetBitmap( wxArtProvider::GetBitmap( wxART_INFORMATION , wxART_MENU ) );
 	m_menuHelpRefs  ->SetBitmap( wxNullBitmap                                               );
 	m_menuHelpHelp  ->SetBitmap( wxArtProvider::GetBitmap( wxART_HELP_BOOK   , wxART_MENU ) );
@@ -490,6 +625,15 @@ IndexingFrame::IndexingFrame( wxWindow* parent, wxWindowID id, const wxString& t
 	m_menuFile->Append( m_menuFileSaveAs );
 	m_menuFile->Append( m_menuFileWizard );
 	m_menubar ->Append( m_menuFile, wxT("File") );
+
+	//assemble edit menu
+		//assemble wisdom submenu
+		m_menuWisd->Append( m_menuWisClear );
+		m_menuWisd->Append( m_menuWisBuild );
+		m_menuWisd->Append( m_menuWisImprt );
+		m_menuWisd->Append( m_menuWisExprt );
+	m_menuEdit->Append( m_menuWisI );
+	m_menubar ->Append( m_menuEdit, wxT("Edit") );
 
 	//assemble help menu
 	m_menuHelp->Append( m_menuHelpAbout );
@@ -534,6 +678,10 @@ IndexingFrame::IndexingFrame( wxWindow* parent, wxWindowID id, const wxString& t
 	m_menuFile->Bind(wxEVT_COMMAND_MENU_SELECTED, wxCommandEventHandler( IndexingFrame::OnFileOpen   ), this, m_menuFileOpen  ->GetId());
 	m_menuFile->Bind(wxEVT_COMMAND_MENU_SELECTED, wxCommandEventHandler( IndexingFrame::OnFileLoad   ), this, m_menuFileSaveAs->GetId());
 	m_menuFile->Bind(wxEVT_COMMAND_MENU_SELECTED, wxCommandEventHandler( IndexingFrame::OnFileWizard ), this, m_menuFileWizard->GetId());
+	m_menuWisd->Bind(wxEVT_COMMAND_MENU_SELECTED, wxCommandEventHandler( IndexingFrame::OnClearWisdom), this, m_menuWisClear  ->GetId());
+	m_menuWisd->Bind(wxEVT_COMMAND_MENU_SELECTED, wxCommandEventHandler( IndexingFrame::OnBuildWisdom), this, m_menuWisBuild  ->GetId());
+	m_menuWisd->Bind(wxEVT_COMMAND_MENU_SELECTED, wxCommandEventHandler( IndexingFrame::OnLoadWisdom ), this, m_menuWisImprt  ->GetId());
+	m_menuWisd->Bind(wxEVT_COMMAND_MENU_SELECTED, wxCommandEventHandler( IndexingFrame::OnSaveWisdom ), this, m_menuWisExprt  ->GetId());
 	m_menuHelp->Bind(wxEVT_COMMAND_MENU_SELECTED, wxCommandEventHandler( IndexingFrame::OnHelpAbout  ), this, wxID_ABOUT);
 	m_menuHelp->Bind(wxEVT_COMMAND_MENU_SELECTED, wxCommandEventHandler( IndexingFrame::OnHelpRefs   ), this, m_menuHelpRefs  ->GetId());
 	m_menuHelp->Bind(wxEVT_COMMAND_MENU_SELECTED, wxCommandEventHandler( IndexingFrame::OnHelpHelp   ), this, wxID_HELP);

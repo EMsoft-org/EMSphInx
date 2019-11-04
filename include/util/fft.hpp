@@ -98,6 +98,17 @@ namespace fft {
 	#endif
 	}
 
+	//@brief   : load FFT wisdom
+	//@param fn: file to import wisdom from
+	template <typename Real> void loadWisdom(char const * fn);
+
+	//@brief   : export FFT wisdom
+	//@param fn: file to export wisdom to
+	template <typename Real> void saveWisdom(char const * fn);
+
+	//@brief: remove FFT wisdom
+	template <typename Real> void clearWisdom();
+
 	//@brief: find the closest FFT size that is fast
 	//@param x: minimum FFT
 	//@return : smallest fast FFT size that is greater or equal to x
@@ -362,6 +373,64 @@ namespace fft {
 		}
 	#endif
 	}
+
+#ifdef EM_USE_F
+	//@brief   : load FFT wisdom
+	//@param fn: file to import wisdom from
+	template <typename Real> void loadWisdom(char const * fn) {
+		if(!detail::fileExists(fn)) throw std::runtime_error("wisdom file doesn't exist");
+		signal(SIGILL, &detail::Wisdom<     float >::IllegalInstructionHandler);//switch to custom illegal instruction handler
+		const bool imported = fftwf_import_wisdom_from_filename(fn);//try to read wisdom
+		signal(SIGILL, SIG_DFL);//switch back to default illegal instruction handler
+		if(!imported) throw std::runtime_error("failed to read wisdom from " + std::string(fn) + ", try deleting wisdom file");
+	}
+
+	//@brief   : export FFT wisdom
+	//@param fn: file to export wisdom to
+	template <typename Real> void saveWisdom(char const * fn) {if(!fftwf_export_wisdom_to_filename(fn)) throw std::runtime_error("failed to write wisdom");}
+
+	//@brief: remove FFT wisdom
+	template <typename Real> void clearWisdom() {fftwf_forget_wisdom();}
+#endif
+
+#ifdef EM_USE_D
+	//@brief   : load FFT wisdom
+	//@param fn: file to import wisdom from
+	template <typename Real> void loadWisdom(char const * fn) {
+		if(!detail::fileExists(fn)) throw std::runtime_error("wisdom file doesn't exist");
+		signal(SIGILL, &detail::Wisdom<     double>::IllegalInstructionHandler);//switch to custom illegal instruction handler
+		const bool imported = fftw_import_wisdom_from_filename (fn);//try to read wisdom
+		signal(SIGILL, SIG_DFL);//switch back to default illegal instruction handler
+		if(!imported) throw std::runtime_error("failed to read wisdom from " + std::string(fn) + ", try deleting wisdom file");
+	}
+
+	//@brief   : export FFT wisdom
+	//@param fn: file to export wisdom to
+	template <typename Real> void saveWisdom(char const * fn) {if(!fftw_export_wisdom_to_filename(fn)) throw std::runtime_error("failed to write wisdom");}
+
+	//@brief: remove FFT wisdom
+	template <typename Real> void clearWisdom() {fftw_forget_wisdom();}
+
+#endif
+
+#ifdef EM_USE_L
+	//@brief   : load FFT wisdom
+	//@param fn: file to import wisdom from
+	template <typename Real> void loadWisdom(char const * fn) {
+		if(!detail::fileExists(fn)) throw std::runtime_error("wisdom file doesn't exist");
+		signal(SIGILL, &detail::Wisdom<long double>::IllegalInstructionHandler);//switch to custom illegal instruction handler
+		const bool imported = fftwl_import_wisdom_from_filename(fn);//try to read wisdom
+		signal(SIGILL, SIG_DFL);//switch back to default illegal instruction handler
+		if(!imported) throw std::runtime_error("failed to read wisdom from " + std::string(fn) + ", try deleting wisdom file");
+	}
+
+	//@brief   : export FFT wisdom
+	//@param fn: file to export wisdom to
+	template <typename Real> void saveWisdom(char const * fn) {if(!fftwl_export_wisdom_to_filename(fn)) throw std::runtime_error("failed to write wisdom");}
+
+	//@brief: remove FFT wisdom
+	template <typename Real> void clearWisdom() {fftwl_forget_wisdom();}
+#endif
 
 	//@brief: find the closest FFT size that is fast
 	//@param x: minimum FFT
