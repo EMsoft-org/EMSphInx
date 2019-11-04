@@ -41,7 +41,7 @@ FFTW Wisdom   tasks related to DFT preplanning, see `FFTW Words of Wisdom`_ for 
 FFTW Wisdom Submenu
 ''''''''''''''''''''''''''''''''''''
 
-================ ===============================================================
+================ ==============================================================
 **Item**         **Function**
 Clear Wisdom     delete any accumulated wisdom
 Build Wisdom...  plan DFTs sizes needed for specified bandwidths
