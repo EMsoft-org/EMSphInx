@@ -9,7 +9,7 @@ EMSphInxEBSD is a GUI for indexing EBSD patterns using spherical harmonics, part
 Main Window
 ------------------------------------
 
-The main window consists of a menu bar (top), live indexing result (left), indexing parameters (right), and progress/status bar (bottom). To index an EBSD scan first specify the parameters by editing the summary panel directly, loading a namelist file, and/or using the wizard. Once the parameters are specified hit the 'Start' button and indexing will begin. 
+The main window consists of a menu bar (top), live indexing result (left), indexing parameters (right), and progress/status bar (bottom). To index an EBSD scan first specify the parameters by editing the summary panel directly, loading a namelist file, and/or using the wizard (Menu |tri| File |tri| Wizard). Once the parameters are specified hit the 'Start' button and indexing will begin. 
 
 Indexer initialization may take several minutes on the first run as Fourier transforms are being planned. To preplan DFTs use Menu |tri| Edit |tri| FFT Wisdom |tri| Build Wisdom.
 
@@ -34,26 +34,18 @@ Save...       save current indexing parameters from a namelist (.nml) file
 Wizard...     build indexing parameters interactively using the wizard (the wizard will be prepopulated with current values if possible)
 ============= ==============================================================
 
-Edit Menu
+Tools Menu
 ************************************
 
-============= ==============================================================
-**Item**      **Function**
-FFTW Wisdom   tasks related to DFT preplanning, see `FFTW Words of Wisdom`_ for details about FFT wisdom
-============= ==============================================================
-
-.. _FFTW Words of Wisdom: http://www.fftw.org/fftw3_doc/Words-of-Wisdom_002dSaving-Plans.html
-
-FFTW Wisdom Submenu
-''''''''''''''''''''''''''''''''''''
-
-================ ==============================================================
-**Item**         **Function**
-Clear Wisdom     delete any accumulated wisdom
-Build Wisdom...  plan DFTs sizes needed for specified bandwidths
-Import Wisdom... load DFT plan wisdom from a file (adds to existing wisdom)
-Export Wisdom... export DFT plan wisdom to a file
-================ ==============================================================
+============================ ==============================================================
+**Item**                     **Function**
+Clear Wisdom                 delete any accumulated wisdom, see `FFTW Words of Wisdom`_ for details about FFT wisdom
+Build Wisdom...              plan DFTs sizes needed for specified bandwidths
+Import Wisdom...             load DFT plan wisdom from a file (adds to existing wisdom)
+Export Wisdom...             export DFT plan wisdom to a file
+Convert Master Pattern...    convert from EMsoft *.h5 master pattern format to EMSphInx *.sht format
+Extract Master Projection... extract a stereographic master pattern projection from a *.sht file
+============================ ==============================================================
 
 Please note that wisdom is hardware specific and for best performance shouldn't be shared between platforms. 
 

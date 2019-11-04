@@ -32,6 +32,9 @@
  *                                                                     *
  * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
 
+#ifndef _WIDSOM_PROMPT_H_
+#define _WIDSOM_PROMPT_H_
+
 #include <wx/string.h>
 #include <wx/stattext.h>
 #include <wx/textctrl.h>
@@ -148,4 +151,7 @@ std::vector<size_t> WisdomPrompt::getBandwidths() {
 
 	return ret;
 }
+
+#endif//_WIDSOM_PROMPT_H_
+
 

@@ -92,7 +92,7 @@ class IndexingFrame : public wxFrame {
 		wxMenuBar       * m_menubar ;
 		wxMenu          * m_menuFile;
 		wxMenu          * m_menuHelp;
-		wxMenu          * m_menuEdit;
+		wxMenu          * m_menuTool;
 		wxMenu          * m_menuWisd;
 		wxSplitterWindow* m_split   ;
 		wxImagePanel    * m_imPan   ;
@@ -109,6 +109,8 @@ class IndexingFrame : public wxFrame {
 		virtual void OnBuildWisdom( wxCommandEvent& event ) { buildWisdom (); }
 		virtual void OnLoadWisdom ( wxCommandEvent& event ) { loadWisdom  (); }
 		virtual void OnSaveWisdom ( wxCommandEvent& event ) { saveWisdom  (); }
+		virtual void OnMp2Sht     ( wxCommandEvent& event ) { event.Skip();}
+		virtual void OnSht2Im     ( wxCommandEvent& event ) { event.Skip();}
 		virtual void OnHelpAbout  ( wxCommandEvent& event ) { showAbout   (); }
 		virtual void OnHelpRefs   ( wxCommandEvent& event ) { showRefs(true); }
 		virtual void OnHelpHelp   ( wxCommandEvent& event ) { showHelp    (); }
@@ -253,7 +255,8 @@ void IndexingFrame::runWizard() {
 
 //@brief: clear wisdom
 void IndexingFrame::clearWisdom() {
-	fft::clearWisdom<double>();
+	wxMessageDialog dlg(this, "Delete all accumulated FFT wisdom?", "Confirm Clear FFT Wisdom", wxCENTRE|wxYES_NO|wxNO_DEFAULT);
+	if(wxID_YES == dlg.ShowModal()) fft::clearWisdom<double>();
 }
 
 //@brief: build wisdom
@@ -591,22 +594,28 @@ IndexingFrame::IndexingFrame( wxWindow* parent, wxWindowID id, const wxString& t
 	//build menus
 	m_menubar  = new wxMenuBar( 0 );
 	m_menuFile = new wxMenu();
-	m_menuEdit = new wxMenu();
+	m_menuTool = new wxMenu();
 	m_menuWisd = new wxMenu();
 	m_menuHelp = new wxMenu();
 
 	//build menu items
-	wxMenuItem* m_menuWisI       = new wxMenuItem( m_menuEdit, wxID_ANY  , wxString( wxT("FFTW Wisdom"     ) )                            , wxEmptyString                              , wxITEM_NORMAL, m_menuWisd );
-	wxMenuItem* m_menuFileOpen   = new wxMenuItem( m_menuFile, wxID_ANY  , wxString( wxT("Open..."     )     ) + wxT('\t') + wxT("ctrl+o"), wxString( wxT("load a namelist file"    ) ), wxITEM_NORMAL );
-	wxMenuItem* m_menuFileSaveAs = new wxMenuItem( m_menuFile, wxID_ANY  , wxString( wxT("Save As..."  )     ) + wxT('\t') + wxT("ctrl+s"), wxString( wxT("export a namelist file"  ) ), wxITEM_NORMAL );
-	wxMenuItem* m_menuFileWizard = new wxMenuItem( m_menuFile, wxID_ANY  , wxString( wxT("Wizard..."   )     ) + wxT('\t') + wxT("ctrl+w"), wxString( wxT("launch nml builder"      ) ), wxITEM_NORMAL );
-	wxMenuItem* m_menuWisClear   = new wxMenuItem( m_menuWisd, wxID_ANY  , wxString( wxT("Clear Wisdom"    ) )                            , wxString( wxT("clear accumulated wisdom") ), wxITEM_NORMAL );
-	wxMenuItem* m_menuWisBuild   = new wxMenuItem( m_menuWisd, wxID_ANY  , wxString( wxT("Build Wisdom..." ) )                            , wxString( wxT("compute wisdom"          ) ), wxITEM_NORMAL );
-	wxMenuItem* m_menuWisImprt   = new wxMenuItem( m_menuWisd, wxID_ANY  , wxString( wxT("Import Wisdom...") )                            , wxString( wxT("load wisdom from file"   ) ), wxITEM_NORMAL );
-	wxMenuItem* m_menuWisExprt   = new wxMenuItem( m_menuWisd, wxID_ANY  , wxString( wxT("Export Wisdom...") )                            , wxString( wxT("export wisdom to file"   ) ), wxITEM_NORMAL );
-	wxMenuItem* m_menuHelpAbout  = new wxMenuItem( m_menuHelp, wxID_ABOUT, wxString( wxT("About"    )        )                            , wxString( wxT("about this software"     ) ), wxITEM_NORMAL );
-	wxMenuItem* m_menuHelpRefs   = new wxMenuItem( m_menuHelp, wxID_ANY  , wxString( wxT("Citations...")     )                            , wxString( wxT("relevant literature"     ) ), wxITEM_NORMAL );
-	wxMenuItem* m_menuHelpHelp   = new wxMenuItem( m_menuHelp, wxID_HELP , wxString( wxT("Help..."     )     )                            , wxString( wxT("documentation browser"   ) ), wxITEM_NORMAL );
+	wxMenuItem* m_menuWisI       = new wxMenuItem( m_menuTool, wxID_ANY  , wxString( wxT("FFTW Wisdom"                 ) )                            , wxEmptyString                              , wxITEM_NORMAL, m_menuWisd );
+	wxMenuItem* m_menuFileOpen   = new wxMenuItem( m_menuFile, wxID_ANY  , wxString( wxT("Open..."                     ) ) + wxT('\t') + wxT("ctrl+o"), wxString( wxT("load a namelist file"      ) ), wxITEM_NORMAL );
+	wxMenuItem* m_menuFileSaveAs = new wxMenuItem( m_menuFile, wxID_ANY  , wxString( wxT("Save As..."                  ) ) + wxT('\t') + wxT("ctrl+s"), wxString( wxT("export a namelist file"    ) ), wxITEM_NORMAL );
+	wxMenuItem* m_menuFileWizard = new wxMenuItem( m_menuFile, wxID_ANY  , wxString( wxT("Wizard..."                   ) ) + wxT('\t') + wxT("ctrl+w"), wxString( wxT("launch nml builder"        ) ), wxITEM_NORMAL );
+
+	wxMenuItem* m_menuWisClear   = new wxMenuItem( m_menuTool, wxID_ANY  , wxString( wxT("Clear Wisdom"                ) )                            , wxString( wxT("clear accumulated wisdom"  ) ), wxITEM_NORMAL );
+	wxMenuItem* m_menuWisBuild   = new wxMenuItem( m_menuTool, wxID_ANY  , wxString( wxT("Build Wisdom..."             ) )                            , wxString( wxT("compute wisdom"            ) ), wxITEM_NORMAL );
+	wxMenuItem* m_menuWisImprt   = new wxMenuItem( m_menuTool, wxID_ANY  , wxString( wxT("Import Wisdom..."            ) )                            , wxString( wxT("load wisdom from file"     ) ), wxITEM_NORMAL );
+	wxMenuItem* m_menuWisExprt   = new wxMenuItem( m_menuTool, wxID_ANY  , wxString( wxT("Export Wisdom..."            ) )                            , wxString( wxT("export wisdom to file"     ) ), wxITEM_NORMAL );
+	wxMenuItem* m_menuMp2Sht     = new wxMenuItem( m_menuTool, wxID_ANY  , wxString( wxT("Convert Master Pattern..."   ) )                            , wxString( wxT("*.h5 to *.sht"             ) ), wxITEM_NORMAL );
+	wxMenuItem* m_menuSht2Im     = new wxMenuItem( m_menuTool, wxID_ANY  , wxString( wxT("Extract Master Projection...") )                            , wxString( wxT("*.sht to *.png hemispheres") ), wxITEM_NORMAL );
+	m_menuMp2Sht->Enable( false );
+	m_menuSht2Im->Enable( false );
+	
+	wxMenuItem* m_menuHelpAbout  = new wxMenuItem( m_menuHelp, wxID_ABOUT, wxString( wxT("About"       )                 )                            , wxString( wxT("about this software"       ) ), wxITEM_NORMAL );
+	wxMenuItem* m_menuHelpRefs   = new wxMenuItem( m_menuHelp, wxID_ANY  , wxString( wxT("Citations...")                 )                            , wxString( wxT("relevant literature"       ) ), wxITEM_NORMAL );
+	wxMenuItem* m_menuHelpHelp   = new wxMenuItem( m_menuHelp, wxID_HELP , wxString( wxT("Help..."     )                 )                            , wxString( wxT("documentation browser"     ) ), wxITEM_NORMAL );
 
 	//set menu item bitmaps
 	m_menuFileOpen  ->SetBitmap( wxArtProvider::GetBitmap( wxART_FILE_OPEN   , wxART_MENU ) );
@@ -626,14 +635,16 @@ IndexingFrame::IndexingFrame( wxWindow* parent, wxWindowID id, const wxString& t
 	m_menuFile->Append( m_menuFileWizard );
 	m_menubar ->Append( m_menuFile, wxT("File") );
 
-	//assemble edit menu
-		//assemble wisdom submenu
-		m_menuWisd->Append( m_menuWisClear );
-		m_menuWisd->Append( m_menuWisBuild );
-		m_menuWisd->Append( m_menuWisImprt );
-		m_menuWisd->Append( m_menuWisExprt );
-	m_menuEdit->Append( m_menuWisI );
-	m_menubar ->Append( m_menuEdit, wxT("Edit") );
+	//assemble tool menu
+	m_menuTool->Append( m_menuWisClear );
+	m_menuTool->Append( m_menuWisBuild );
+	m_menuTool->Append( m_menuWisImprt );
+	m_menuTool->Append( m_menuWisExprt );
+	m_menuTool->AppendSeparator();
+	m_menuTool->Append( m_menuMp2Sht   );
+	m_menuTool->Append( m_menuSht2Im   );
+
+	m_menubar ->Append( m_menuTool, wxT("Tools") );
 
 	//assemble help menu
 	m_menuHelp->Append( m_menuHelpAbout );
@@ -678,10 +689,12 @@ IndexingFrame::IndexingFrame( wxWindow* parent, wxWindowID id, const wxString& t
 	m_menuFile->Bind(wxEVT_COMMAND_MENU_SELECTED, wxCommandEventHandler( IndexingFrame::OnFileOpen   ), this, m_menuFileOpen  ->GetId());
 	m_menuFile->Bind(wxEVT_COMMAND_MENU_SELECTED, wxCommandEventHandler( IndexingFrame::OnFileLoad   ), this, m_menuFileSaveAs->GetId());
 	m_menuFile->Bind(wxEVT_COMMAND_MENU_SELECTED, wxCommandEventHandler( IndexingFrame::OnFileWizard ), this, m_menuFileWizard->GetId());
-	m_menuWisd->Bind(wxEVT_COMMAND_MENU_SELECTED, wxCommandEventHandler( IndexingFrame::OnClearWisdom), this, m_menuWisClear  ->GetId());
-	m_menuWisd->Bind(wxEVT_COMMAND_MENU_SELECTED, wxCommandEventHandler( IndexingFrame::OnBuildWisdom), this, m_menuWisBuild  ->GetId());
-	m_menuWisd->Bind(wxEVT_COMMAND_MENU_SELECTED, wxCommandEventHandler( IndexingFrame::OnLoadWisdom ), this, m_menuWisImprt  ->GetId());
-	m_menuWisd->Bind(wxEVT_COMMAND_MENU_SELECTED, wxCommandEventHandler( IndexingFrame::OnSaveWisdom ), this, m_menuWisExprt  ->GetId());
+	m_menuTool->Bind(wxEVT_COMMAND_MENU_SELECTED, wxCommandEventHandler( IndexingFrame::OnClearWisdom), this, m_menuWisClear  ->GetId());
+	m_menuTool->Bind(wxEVT_COMMAND_MENU_SELECTED, wxCommandEventHandler( IndexingFrame::OnBuildWisdom), this, m_menuWisBuild  ->GetId());
+	m_menuTool->Bind(wxEVT_COMMAND_MENU_SELECTED, wxCommandEventHandler( IndexingFrame::OnLoadWisdom ), this, m_menuWisImprt  ->GetId());
+	m_menuTool->Bind(wxEVT_COMMAND_MENU_SELECTED, wxCommandEventHandler( IndexingFrame::OnSaveWisdom ), this, m_menuWisExprt  ->GetId());
+	m_menuTool->Bind(wxEVT_COMMAND_MENU_SELECTED, wxCommandEventHandler( IndexingFrame::OnMp2Sht     ), this, m_menuMp2Sht    ->GetId());
+	m_menuTool->Bind(wxEVT_COMMAND_MENU_SELECTED, wxCommandEventHandler( IndexingFrame::OnSht2Im     ), this, m_menuSht2Im    ->GetId());
 	m_menuHelp->Bind(wxEVT_COMMAND_MENU_SELECTED, wxCommandEventHandler( IndexingFrame::OnHelpAbout  ), this, wxID_ABOUT);
 	m_menuHelp->Bind(wxEVT_COMMAND_MENU_SELECTED, wxCommandEventHandler( IndexingFrame::OnHelpRefs   ), this, m_menuHelpRefs  ->GetId());
 	m_menuHelp->Bind(wxEVT_COMMAND_MENU_SELECTED, wxCommandEventHandler( IndexingFrame::OnHelpHelp   ), this, wxID_HELP);
