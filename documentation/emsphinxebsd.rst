@@ -15,7 +15,7 @@ Indexer initialization may take several minutes on the first run as Fourier tran
 
 The main window is split into 3 primary sections as seen in the screenshot below: live indexing result (left), `Parameter Summary Panel`_ (right), and status bar (bottom)
 
-.. image:: images/emsphinxebsd/main_window.png
+.. image:: images/emsphinxebsd/main_win.png
   :width: 600
   :alt: Main Window Screenshot
 
