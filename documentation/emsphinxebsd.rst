@@ -39,6 +39,8 @@ FFTW Wisdom   tasks related to DFT preplanning, see `FFTW Words of Wisdom`_ for 
 .. _FFTW Words of Wisdom: http://www.fftw.org/fftw3_doc/Words-of-Wisdom_002dSaving-Plans.html
 
 FFTW Wisdom Submenu
+''''''''''''''''''''''''''''''''''''
+
 =============== ===============================================================
 **Item**         **Function**
 Clear Wisdom     delete any accumulated wisdom
