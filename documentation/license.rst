@@ -32,7 +32,7 @@ from several other projects:
 GPL2 License
 -------------------------
 
-.. code:: highlight
+.. code-block:: none
 
 	GNU GENERAL PUBLIC LICENSE
 
@@ -127,7 +127,7 @@ GPL2 License
 wxWidgets License
 -------------------------
 
-.. code:: highlight
+.. code-block:: none
 
              wxWindows Library Licence, Version 3.1
 
@@ -186,7 +186,7 @@ wxWidgets License
 miniz License
 -------------------------
 
-.. code:: highlight
+.. code-block:: none
 
    Copyright 2013-2014 RAD Game Tools and Valve Software
    Copyright 2010-2014 Rich Geldreich and Tenacious Software LLC
