@@ -13,6 +13,12 @@ The main window consists of a menu bar (top), live indexing result (left), index
 
 Indexer initialization may take several minutes on the first run as Fourier transforms are being planned. To preplan DFTs use Menu |tri| Edit |tri| FFT Wisdom |tri| Build Wisdom.
 
+The main window is split into 3 primary sections as seen in the screenshot below: live indexing result (left), `Parameter Summary Panel`_ (right), and status bar (bottom)
+
+.. image:: images/emsphinxebsd/main_window.png
+  :width: 600
+  :alt: Main Window Screenshot
+
 .. |tri| unicode:: U+25B6 .. right triangle
 
 Menu Bar
@@ -220,6 +226,10 @@ Any error messages are displayed in the status bar (bottom left)
 Experimental Pattern Selection
 ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
+.. image:: images/emsphinxebsd/pat_sel.png
+  :width: 571
+  :alt: Experimental Pattern Selection Screenshot
+
 Pattern File
 ************************************
 
@@ -264,8 +274,16 @@ can tick the 'Compute Image Quality Map for ROI Selection' box to
 calculate IQ during pattern loading. If the box is ticked a computed IQ
 map will be available on the 'Scan Geometry' page.
 
+.. image:: images/emsphinxebsd/pat_proc.png
+  :width: 600
+  :alt: Image Processing Window Screenshot
+
 Master Pattern Selection
 ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+
+.. image:: images/emsphinxebsd/mp_sel.png
+  :width: 571
+  :alt: Master Pattern Selection Screenshot
 
 Indexing Master Patterns
 ************************************
@@ -303,8 +321,16 @@ kV, Tilt, SG#, and/or composition. All master pattern files in a folder
 right). Master patterns can be move to the indexing list by ticking the
 checkbox (OS X or Linux only) or double clicking.
 
+.. image:: images/emsphinxebsd/mp_filt.png
+  :width: 600
+  :alt: Library Filters Screenshot
+
 Detector Geometry
 ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+
+.. image:: images/emsphinxebsd/pat_cen.png
+  :width: 571
+  :alt: Detector Geometry Selection Screenshot
 
 Pixel Size
 ************************************
@@ -365,6 +391,10 @@ details on the geometric model.
 Scan Geometry
 ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
+.. image:: images/emsphinxebsd/scan_dims.png
+  :width: 571
+  :alt: Scan Geometry Screenshot
+
 Scan Dimensions
 ************************************
 
@@ -383,6 +413,10 @@ interactively click the 'Select ROI...' button.
 
 ROI Drawing Dialog
 ''''''''''''''''''''''''''''''''''''
+
+.. image:: images/emsphinxebsd/roi_sel.png
+  :width: 498
+  :alt: ROI Drawing Dialog Screenshot
 
 Select the ROI shape from the dropdown and draw a region accordingly.
 Pixels to index are unmodified and pixels to skip are grayed. Tick the
@@ -412,6 +446,10 @@ the left.
 
 Indexing Parameters
 ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+
+.. image:: images/emsphinxebsd/idx_param.png
+  :width: 571
+  :alt: Indexing Parameters Screenshot
 
 Specify the bandwidth, if normalize/unnormalized cross correlation
 should be used, and if newton's method based refinement should be used.
@@ -447,6 +485,10 @@ packages. Finally IPF (z reference) and spherical cross correlation maps
 
 Summary
 ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+
+.. image:: images/emsphinxebsd/summary.png
+  :width: 571
+  :alt: Summary Screenshot
 
 A read only summary of the generated parameters is displayed. Refer to
 the `Parameter Summary Panel`_ for details.
