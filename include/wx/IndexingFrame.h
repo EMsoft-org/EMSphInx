@@ -109,7 +109,7 @@ class IndexingFrame : public wxFrame {
 		virtual void OnBuildWisdom( wxCommandEvent& event ) { buildWisdom (); }
 		virtual void OnLoadWisdom ( wxCommandEvent& event ) { loadWisdom  (); }
 		virtual void OnSaveWisdom ( wxCommandEvent& event ) { saveWisdom  (); }
-		virtual void OnMp2Sht     ( wxCommandEvent& event ) { event.Skip();}
+		virtual void OnMp2Sht     ( wxCommandEvent& event ) { mp2sht      (); }
 		virtual void OnSht2Im     ( wxCommandEvent& event ) { event.Skip();}
 		virtual void OnHelpAbout  ( wxCommandEvent& event ) { showAbout   (); }
 		virtual void OnHelpRefs   ( wxCommandEvent& event ) { showRefs(true); }
@@ -171,6 +171,9 @@ class IndexingFrame : public wxFrame {
 		//@brief: save wisdom
 		void saveWisdom();
 
+		//@brief: run mp2sht prompt
+		void mp2sht();
+
 		//@brief: run the about window
 		void showAbout();
 
@@ -210,6 +213,7 @@ END_EVENT_TABLE()
 #include <wx/filedlg.h>
 #include <wx/aboutdlg.h>
 #include "WisdomPrompt.h"
+#include "MPConvertDlg.h"
 #include "constants.hpp"
 #include "sht_file.hpp"
 
@@ -355,6 +359,118 @@ void IndexingFrame::saveWisdom() {
 	} catch (std::exception& e) {
 		wxMessageDialog msgDlg(this, e.what(), "Error Exporting Wisdom");
 		msgDlg.ShowModal();
+	}
+}
+
+//@brief: run mp2sht prompt
+void IndexingFrame::mp2sht() {
+	MpConvertDialog dlg(this);
+	if(wxID_OK == dlg.ShowModal()) {
+		//build progress dialog
+		wxProgressDialog prgDlg("Converting Master Pattern", "Reading EMsoft master pattern", 100, this, wxPD_APP_MODAL | wxPD_AUTO_HIDE);
+		prgDlg.Show();
+		prgDlg.Update(0);
+
+		//do work in thread
+		std::atomic<int> status;
+		status.store(0);
+		std::thread work([&dlg,&status,this](){
+			try {
+				//read the master pattern
+				status.store(0);
+				emsphinx::MasterPattern<double> mp(dlg.getInput());
+
+				//do the harmonic transform
+				status.store(1);
+				const size_t bw = dlg.getBw();
+				const bool nrm = true;
+				emsphinx::MasterSpectra<double> spec(mp, bw, nrm);
+
+				//read the metadata
+				status.store(2);
+				float fprm[25];
+				int32_t iprm[11];
+				iprm[1] = (int32_t) sht::Modality::EBSD;
+				iprm[2] = bw;
+				fprm[0] = (float) spec.getKv ();
+				fprm[1] = (float) spec.getSig();
+				fprm[2] = 0.0f;
+				fprm[3] = 0.0f;
+
+				//read in crystal data
+				float lat[6];
+				H5::H5File file = H5::H5File(dlg.getInput().c_str(), H5F_ACC_RDONLY);//read only access
+				file.openGroup("CrystalData").openDataSet("SpaceGroupNumber" ).read(iprm + 3, H5::PredType::NATIVE_INT32); iprm[0] = iprm[3];//effective space group
+				file.openGroup("CrystalData").openDataSet("SpaceGroupSetting").read(iprm + 4, H5::PredType::NATIVE_INT32);
+				file.openGroup("CrystalData").openDataSet("LatticeParameters").read(fprm + 4, H5::PredType::NATIVE_FLOAT);
+				file.openGroup("CrystalData").openDataSet("Natomtypes"       ).read(iprm + 5, H5::PredType::NATIVE_INT32);
+				std::vector<int32_t> aTy(iprm[5]);
+				std::vector<float> aCd(iprm[5] * 5);
+				file.openGroup("CrystalData").openDataSet("AtomData" ).read(aCd .data(), H5::PredType::NATIVE_FLOAT);
+				file.openGroup("CrystalData").openDataSet("Atomtypes").read(aTy.data(), H5::PredType::NATIVE_INT32);
+
+				//read in simulation data
+				file.openGroup("NMLparameters").openGroup("MCCLNameList"      ).openDataSet("sig"       ).read(fprm + 10, H5::PredType::NATIVE_FLOAT);
+				fprm[11] = NAN;//sig end
+				fprm[12] = NAN;//sig step
+				file.openGroup("NMLparameters").openGroup("MCCLNameList"      ).openDataSet("omega"     ).read(fprm + 13, H5::PredType::NATIVE_FLOAT);
+				file.openGroup("NMLparameters").openGroup("MCCLNameList"      ).openDataSet("EkeV"      ).read(fprm + 14, H5::PredType::NATIVE_FLOAT);
+				file.openGroup("NMLparameters").openGroup("MCCLNameList"      ).openDataSet("Ehistmin"  ).read(fprm + 15, H5::PredType::NATIVE_FLOAT);
+				file.openGroup("NMLparameters").openGroup("MCCLNameList"      ).openDataSet("Ebinsize"  ).read(fprm + 16, H5::PredType::NATIVE_FLOAT);
+				file.openGroup("NMLparameters").openGroup("MCCLNameList"      ).openDataSet("depthmax"  ).read(fprm + 17, H5::PredType::NATIVE_FLOAT);
+				file.openGroup("NMLparameters").openGroup("MCCLNameList"      ).openDataSet("depthstep" ).read(fprm + 18, H5::PredType::NATIVE_FLOAT);
+				fprm[19] = std::numeric_limits<float>::infinity();//thickness
+				file.openGroup("NMLparameters").openGroup("BetheList"         ).openDataSet("c1"        ).read(fprm + 20, H5::PredType::NATIVE_FLOAT);
+				file.openGroup("NMLparameters").openGroup("BetheList"         ).openDataSet("c2"        ).read(fprm + 21, H5::PredType::NATIVE_FLOAT);
+				file.openGroup("NMLparameters").openGroup("BetheList"         ).openDataSet("c3"        ).read(fprm + 22, H5::PredType::NATIVE_FLOAT);
+				file.openGroup("NMLparameters").openGroup("BetheList"         ).openDataSet("sgdbdiff"  ).read(fprm + 23, H5::PredType::NATIVE_FLOAT);
+				file.openGroup("NMLparameters").openGroup("EBSDMasterNameList").openDataSet("dmin"      ).read(fprm + 24, H5::PredType::NATIVE_FLOAT);
+
+				file.openGroup("NMLparameters").openGroup("MCCLNameList"      ).openDataSet("totnum_el" ).read(iprm +  6, H5::PredType::NATIVE_INT32);
+				file.openGroup("NMLparameters").openGroup("MCCLNameList"      ).openDataSet("multiplier").read(iprm +  7, H5::PredType::NATIVE_INT32);
+				file.openGroup("NMLparameters").openGroup("MCCLNameList"      ).openDataSet("numsx"     ).read(iprm +  8, H5::PredType::NATIVE_INT32);
+				file.openGroup("NMLparameters").openGroup("EBSDMasterNameList").openDataSet("npx"       ).read(iprm +  9, H5::PredType::NATIVE_INT32);
+				iprm[10] = 1;//lattitude grid type
+
+				//assemble file
+				status.store(3);
+				sht::File shtFile;
+				std::string doi = "https://doi.org/10.1016/j.ultramic.2019.112841";
+				std::string note = "created with EMSphinxEBSD";
+				char emVers[8] = "5_0_0_0";
+				std::string cprm = dlg.getFormula() + '\0';
+				dlg.getName() += "\0";//material name e.g. gamma
+				dlg.getSSyb() += "\0";//structure symbol e.g. L1_2
+				cprm += "\0";//references
+				cprm += "\0";//note
+				shtFile.initFileEMsoft(iprm, fprm, doi.c_str(), note.c_str(), (double*)spec.data());//initialize header + harmonics
+				shtFile.addDataEMsoft(iprm + 3, fprm + 4, aTy.data(), aCd.data(), emVers, cprm.c_str());//add crystal + simulation data
+				std::ofstream os(dlg.getOutput(), std::ios::out | std::ios::binary);
+				shtFile.write(os);
+			} catch (std::runtime_error& e) {
+				wxMessageDialog msgDlg(this, e.what(), "Error Converting Master Pattern");
+				msgDlg.ShowModal();
+			} catch (...) {
+				wxMessageDialog msgDlg(this, "unhandled exception", "Error Converting Master Pattern");
+				msgDlg.ShowModal();
+			}
+			status.store(-1);
+		});
+
+		//wait for work to finish
+		int vStat = 0;
+		while(vStat != -1) {
+			std::this_thread::sleep_for(std::chrono::milliseconds(50));
+			switch(vStat) {
+				case 0: break;
+				case 1: prgDlg.Update(10, "Computing spherical harmonic transform"); break;
+				case 2: prgDlg.Update(90, "Reading simulation metadata"); break;
+				case 3: prgDlg.Update(95, "Writing output"); break;
+			}
+			vStat = status.load();
+		}
+		work.join();
+		prgDlg.Update(100);
 	}
 }
 
@@ -610,9 +726,9 @@ IndexingFrame::IndexingFrame( wxWindow* parent, wxWindowID id, const wxString& t
 	wxMenuItem* m_menuWisExprt   = new wxMenuItem( m_menuTool, wxID_ANY  , wxString( wxT("Export Wisdom..."            ) )                            , wxString( wxT("export wisdom to file"     ) ), wxITEM_NORMAL );
 	wxMenuItem* m_menuMp2Sht     = new wxMenuItem( m_menuTool, wxID_ANY  , wxString( wxT("Convert Master Pattern..."   ) )                            , wxString( wxT("*.h5 to *.sht"             ) ), wxITEM_NORMAL );
 	wxMenuItem* m_menuSht2Im     = new wxMenuItem( m_menuTool, wxID_ANY  , wxString( wxT("Extract Master Projection...") )                            , wxString( wxT("*.sht to *.png hemispheres") ), wxITEM_NORMAL );
-	m_menuMp2Sht->Enable( false );
+	// m_menuMp2Sht->Enable( false );
 	m_menuSht2Im->Enable( false );
-	
+
 	wxMenuItem* m_menuHelpAbout  = new wxMenuItem( m_menuHelp, wxID_ABOUT, wxString( wxT("About"       )                 )                            , wxString( wxT("about this software"       ) ), wxITEM_NORMAL );
 	wxMenuItem* m_menuHelpRefs   = new wxMenuItem( m_menuHelp, wxID_ANY  , wxString( wxT("Citations...")                 )                            , wxString( wxT("relevant literature"       ) ), wxITEM_NORMAL );
 	wxMenuItem* m_menuHelpHelp   = new wxMenuItem( m_menuHelp, wxID_HELP , wxString( wxT("Help..."     )                 )                            , wxString( wxT("documentation browser"     ) ), wxITEM_NORMAL );

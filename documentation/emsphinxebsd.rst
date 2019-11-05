@@ -11,7 +11,7 @@ Main Window
 
 The main window consists of a menu bar (top), live indexing result (left), indexing parameters (right), and progress/status bar (bottom). To index an EBSD scan first specify the parameters by editing the summary panel directly, loading a namelist file, and/or using the wizard (Menu |tri| File |tri| Wizard). Once the parameters are specified hit the 'Start' button and indexing will begin. 
 
-Indexer initialization may take several minutes on the first run as Fourier transforms are being planned. To preplan DFTs use Menu |tri| Edit |tri| FFT Wisdom |tri| Build Wisdom.
+Indexer initialization may take several minutes on the first run as Fourier transforms are being planned. To preplan DFTs use Menu |tri| Tools |tri| Build Wisdom.
 
 The main window is split into 3 primary sections as seen in the screenshot below: live indexing result (left), `Parameter Summary Panel`_ (right), and status bar (bottom)
 
