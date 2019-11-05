@@ -56,6 +56,10 @@ namespace emsphinx {
 			//@return: phase
 			xtal::Phase<Real> phase() const {return phs;}
 
+			//@brief : get a copy of the phase
+			//@return: phase
+			void setPhase(const xtal::Phase<Real>& p) {phs = p;}
+
 			//@brief : get a copy of the phase's point group
 			//@return: symmetry group
 			xtal::PointGroup pointGroup() const {return phs.pg;}

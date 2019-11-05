@@ -110,7 +110,7 @@ class IndexingFrame : public wxFrame {
 		virtual void OnLoadWisdom ( wxCommandEvent& event ) { loadWisdom  (); }
 		virtual void OnSaveWisdom ( wxCommandEvent& event ) { saveWisdom  (); }
 		virtual void OnMp2Sht     ( wxCommandEvent& event ) { mp2sht      (); }
-		virtual void OnSht2Im     ( wxCommandEvent& event ) { event.Skip();}
+		virtual void OnSht2Im     ( wxCommandEvent& event ) { sht2im      (); }
 		virtual void OnHelpAbout  ( wxCommandEvent& event ) { showAbout   (); }
 		virtual void OnHelpRefs   ( wxCommandEvent& event ) { showRefs(true); }
 		virtual void OnHelpHelp   ( wxCommandEvent& event ) { showHelp    (); }
@@ -174,6 +174,9 @@ class IndexingFrame : public wxFrame {
 		//@brief: run mp2sht prompt
 		void mp2sht();
 
+		//@brief: run sht2im prompt
+		void sht2im();
+
 		//@brief: run the about window
 		void showAbout();
 
@@ -212,9 +215,12 @@ END_EVENT_TABLE()
 
 #include <wx/filedlg.h>
 #include <wx/aboutdlg.h>
+#include <wx/choicdlg.h>
+#include <wx/colordlg.h>
 #include "WisdomPrompt.h"
 #include "MPConvertDlg.h"
 #include "constants.hpp"
+#include "xtal/diagram.hpp"
 #include "sht_file.hpp"
 
 DEFINE_EVENT_TYPE(wxEVT_IndexingThread)
@@ -474,6 +480,59 @@ void IndexingFrame::mp2sht() {
 	}
 }
 
+void IndexingFrame::sht2im() {
+	//get input file
+	wxFileDialog opDlg(this, _("Select Master Pattern"), "", "", "spherical harmonic transform (*.sht)|*.sht", wxFD_OPEN|wxFD_FILE_MUST_EXIST);
+	if(opDlg.ShowModal() == wxID_CANCEL) return;//cancel
+
+	try {
+		//read in the master spectrum and reconstruct square legendre projection
+		emsphinx::MasterSpectra<double> spec(opDlg.GetPath().ToStdString());
+		const size_t dim = spec.getBw() + (spec.getBw() % 2 == 0 ? 3 : 2);
+		emsphinx::MasterPattern<double> mp(dim);
+		mp.lyt = emsphinx::square::Layout::Legendre;
+		mp.setPhase(spec.phase());
+		emsphinx::square::DiscreteSHT<double> sht(dim, spec.getBw(), emsphinx::square::Layout::Legendre);
+		sht.synthesize(spec.data(), mp.nh.data(), mp.sh.data());//now we have a real space square legendre master pattern
+
+		//get annotation color
+		wxColourData cData;
+		cData.SetColour(wxColor(0xA0, 0x00, 0x00));
+		wxColourDialog clrDlg(this, &cData);
+		if(clrDlg.ShowModal() == wxID_CANCEL) return;
+		svg::Color clr(
+			double(clrDlg.GetColourData().GetColour().Red  ()) / 255,
+			double(clrDlg.GetColourData().GetColour().Green()) / 255,
+			double(clrDlg.GetColourData().GetColour().Blue ()) / 255
+			//svg::Color doesn't have alpha
+		);
+
+		//build diagram
+		xtal::Diagram::Type t = xtal::Diagram::Type::Stereo;
+		xtal::Diagram nh(mp.toLambert(), clr, t);
+
+		if(mp.pointGroup().zMirror()) {//hemispheres are identical
+			//select location to save north/south hemisphere
+			wxFileDialog svDlgNh(this, _("Output File"), "", "", "scalable vector graphics (*.svg)|*.svg", wxFD_SAVE|wxFD_OVERWRITE_PROMPT);
+			if(svDlgNh.ShowModal() == wxID_CANCEL) return;//cancel
+			nh.getHemi(true).write(svDlgNh.GetPath().ToStdString());
+		} else {//hemispheres are different
+			//select location to save north hemisphere
+			wxFileDialog svDlgNh(this, _("Northern Hemisphere"), "", "", "scalable vector graphics (*.svg)|*.svg", wxFD_SAVE|wxFD_OVERWRITE_PROMPT);
+			if(svDlgNh.ShowModal() == wxID_CANCEL) return;//cancel
+			nh.getHemi(true).write(svDlgNh.GetPath().ToStdString());
+
+			//select location to save north hemisphere
+			wxFileDialog svDlgSh(this, _("Southern Hemisphere"), "", "", "scalable vector graphics (*.svg)|*.svg", wxFD_SAVE|wxFD_OVERWRITE_PROMPT);
+			if(svDlgSh.ShowModal() == wxID_CANCEL) return;//cancel
+			nh.getHemi(false).write(svDlgSh.GetPath().ToStdString());
+		}
+	} catch (std::exception& e) {
+		wxMessageDialog msgDlg(this, e.what(), "Error Creating Diagram");
+		msgDlg.ShowModal();
+	}
+}
+
 void IndexingFrame::WizardClosed(wxCloseEvent& event) {
 	EbsdNamelistWizard* wizard = (EbsdNamelistWizard*) event.GetEventObject();
 	if(wizard->isFinished()) {
@@ -726,8 +785,6 @@ IndexingFrame::IndexingFrame( wxWindow* parent, wxWindowID id, const wxString& t
 	wxMenuItem* m_menuWisExprt   = new wxMenuItem( m_menuTool, wxID_ANY  , wxString( wxT("Export Wisdom..."            ) )                            , wxString( wxT("export wisdom to file"     ) ), wxITEM_NORMAL );
 	wxMenuItem* m_menuMp2Sht     = new wxMenuItem( m_menuTool, wxID_ANY  , wxString( wxT("Convert Master Pattern..."   ) )                            , wxString( wxT("*.h5 to *.sht"             ) ), wxITEM_NORMAL );
 	wxMenuItem* m_menuSht2Im     = new wxMenuItem( m_menuTool, wxID_ANY  , wxString( wxT("Extract Master Projection...") )                            , wxString( wxT("*.sht to *.png hemispheres") ), wxITEM_NORMAL );
-	// m_menuMp2Sht->Enable( false );
-	m_menuSht2Im->Enable( false );
 
 	wxMenuItem* m_menuHelpAbout  = new wxMenuItem( m_menuHelp, wxID_ABOUT, wxString( wxT("About"       )                 )                            , wxString( wxT("about this software"       ) ), wxITEM_NORMAL );
 	wxMenuItem* m_menuHelpRefs   = new wxMenuItem( m_menuHelp, wxID_ANY  , wxString( wxT("Citations...")                 )                            , wxString( wxT("relevant literature"       ) ), wxITEM_NORMAL );

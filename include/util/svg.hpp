@@ -668,10 +668,12 @@ namespace svg {
 
 #include "util/base64.hpp"
 
-#define MINIZ_NO_STDIO
-#define MINIZ_NO_TIME
-#define MINIZ_NO_ZLIB_APIS
-#include "miniz/miniz.c"
+#ifndef MZ_VERSION
+	#define MINIZ_NO_STDIO
+	#define MINIZ_NO_TIME
+	#define MINIZ_NO_ZLIB_APIS
+	#include "miniz/miniz.c"
+#endif
 
 #include "constants.hpp"
 
