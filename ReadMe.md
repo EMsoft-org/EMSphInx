@@ -10,7 +10,7 @@
 The *EMSphInx* code was developed with support from an ONR Vannevar Bush Faculty Fellowship grant, N00014-­16-­1-­2821. The central indexing algorithm is covered by a provisional patent application.
 
 ## Master Pattern Database
-A [database of master patterns](https://github.com/EMsoft-org/SHTdatabase) in the new SHT file format is now available. Please note that the database uses SHT version 1.1 while EMSphInx release 0.1 uses SHT version 1.0. Updated binaries compatible with the database will be posted soon. In the interim use of the database requires building EMSphInx from source.
+A [database of master patterns](https://github.com/EMsoft-org/SHTdatabase) in the new SHT file format is now available. New EMSphInx releases (0.2+) use the same file version as the database (1.1) but EMSphInx 0.1 uses an older format and is incompatable.
 
 ## Build Instructions
 Nightly builds will be available soon for a variety of operating systems. Binaries are also available as [assets for tagged releases](https://github.com/EMsoft-org/EMSphInx/releases).
@@ -35,40 +35,18 @@ Run cmake and build, if you would like to build the GUIs you can optionally set 
 
 FFTW can compile SIMD instructions on some platforms even if they are not available on the current hardware. If you encounter illegal instructions at runtime try compiling with SIMD disabled (-DEMSPHINX_FFTW_SIMD=OFF). AVX2 instructions are disabled by default but can be enabled with EMSPHINX_FFTW_AVX2.
 
-## Utility Program Overview
+## Documentation
 
-1. IndexEBSD
+Detailed documentation is available for the EMSphInxEBSD GUI program on [readthedocs](https://emsphinx.readthedocs.io/en/latest/). The functionality of the commandline programs is mostly equivlanet to the GUI and instruction are printed by running the program with no arguments.
 
-   index EBSD patterns on the command line with a namelist file
-
-2. MasterXcorr
-
-   compute spherical cross correlation between 2 spherical master patterns
-
-3. ShtWisdom
-
-   build FFTW wisdom on new systems (reduces initialization time on first execution of other programs)
-
-4. mp2sht
-
-   convert from EMsoft EBSD master patterns to the new SHT file format used by the indexing programs
-
-5. sht2png
-
-   extract north/south hemisphere images and simulation parameters from an SHT file
-
-6. EMSphInxEBSD (only if EMSPHINX_BUILD_GUIS=ON)
-
-   graphical user interface to build namelist files for IndexEBSD and/or index patterns directly
-
-Help files for these programs are available as wiki pages on [github.com:EMsoft-org/EMSphInx/wiki]() or in the documentation folder of this repository.
-
-## New features in 0.1
-- Public Beta
+## New features in 0.2
+- Bug fixes
+- GUI improvements
 
 ## What's coming in future versions
 - Additional diffraction modalities
 - Python bindings
+- A GUI for pseudo-symmetry prediction (currently available through the command line program 'MasterXCorr')
 
 Feel free to request additional features using the repo's [issue tracker](https://github.com/EMsoft-org/EMSphInx/issues) (please be sure to tag your issue with the 'enhancement flag')
 
