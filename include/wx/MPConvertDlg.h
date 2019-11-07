@@ -192,7 +192,7 @@ void MpConvertDialog::OnInputChanged  ( wxFileDirPickerEvent& event ) {
 		xtalData.openDataSet("AtomData" ).read(aCd.data(), H5::PredType::NATIVE_FLOAT);
 		xtalData.openDataSet("Atomtypes").read(aTy.data(), H5::PredType::NATIVE_INT32);
 	} catch (std::exception& e) {
-		wxMessageDialog msgDlg(this, event.GetString(), "Error Reading Master Pattern");
+		wxMessageDialog msgDlg(this, e.what(), "Error Reading Master Pattern");
 		msgDlg.ShowModal();
 		m_fileIn->SetPath("");
 		return;
@@ -269,12 +269,12 @@ void MpConvertDialog::OnInputChanged  ( wxFileDirPickerEvent& event ) {
 	};
 	std::vector<AtSite> sites;
 	std::vector<bool> used(nAtom, false);
-	for(size_t i = 0; i < nAtom; i++) {
+	for(int32_t i = 0; i < nAtom; i++) {
 		if(used[i]) continue;//we already used this site
 		AtSite s;
 		s.occ[aTy[i]] = aCd[nAtom * 3 + i];//save first atom at this site
 		s.mult = aPos[i].size();//save multiplicity
-		for(size_t j = i+1; j < nAtom; j++) {//check if there are other atoms at the same site
+		for(int32_t j = i+1; j < nAtom; j++) {//check if there are other atoms at the same site
 			if(used[j]) continue;//we already used this site
 			if(aPos[i] == aPos[j]) {//same site coordinates
 				s.occ[aTy[j]] = aCd[nAtom * 3 + j];//save additional atom at same site
@@ -302,7 +302,7 @@ void MpConvertDialog::OnInputChanged  ( wxFileDirPickerEvent& event ) {
 
 	//get greatest common denominator of multiplicities
 	size_t gcd = cmbSite.front().mult;
-	for(int32_t i = 1; i < cmbSite.size(); i++) gcd = gcd_detail::gcd(cmbSite[i].mult, gcd);
+	for(size_t i = 1; i < cmbSite.size(); i++) gcd = gcd_detail::gcd(cmbSite[i].mult, gcd);
 
 	//now that we have the combined sites assemble the formula
 	static const std::vector<std::string> AtSyb = {

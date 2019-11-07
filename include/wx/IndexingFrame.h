@@ -404,7 +404,6 @@ void IndexingFrame::mp2sht() {
 				fprm[3] = 0.0f;
 
 				//read in crystal data
-				float lat[6];
 				H5::H5File file = H5::H5File(dlg.getInput().c_str(), H5F_ACC_RDONLY);//read only access
 				file.openGroup("CrystalData").openDataSet("SpaceGroupNumber" ).read(iprm + 3, H5::PredType::NATIVE_INT32); iprm[0] = iprm[3];//effective space group
 				file.openGroup("CrystalData").openDataSet("SpaceGroupSetting").read(iprm + 4, H5::PredType::NATIVE_INT32);
