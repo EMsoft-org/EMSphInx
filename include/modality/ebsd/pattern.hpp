@@ -274,6 +274,71 @@ namespace emsphinx {
 				std::transform(ext.begin(), ext.end(), ext.begin(), [](char c){return std::tolower(c);});//convert to lowercase
 				return ext;
 			}
+
+			//@breif: helper struct for reading various versions of EDAX up1/up2 format
+			//@note : based on IDL code from Dave Rowenhorst: https://github.com/USNavalResearchLaboratory/NLPAR
+			struct UpHeader {
+				//version 1,2,3
+				int32_t vers     ;//file version
+				int32_t patDim[2];//pattern dimensions in pixels (width, height)
+				int32_t dStart   ;//offset to raw pattern data in bytes (normally 16 for version 1, 42 for version 3)
+
+				//version 2/3 only (it isn't 100% clear what the difference between versions 2 and 3 are)
+				int8_t  extPat   ;//number of extra patterns
+				int32_t scnDim[2];//scan dimensions in pixel (cols, rows)
+				int8_t  hexFlg   ;//hexagonal grid flag (0 for square grid, 1 for hex grid)
+				double  scnRes[2];//pixel size in microns (dx, dy)
+
+				//@brief   : read a UP header from an input stream
+				//@param is: input stream to read from
+				//@return  : is
+				std::istream& read(std::istream& is) {
+					//start by reading shared 4xint32_t
+					if(!is.read((char*)&vers  , sizeof(int32_t)    )) throw std::runtime_error("failed to read UP file version");
+					if(!is.read((char*) patDim, sizeof(int32_t) * 2)) throw std::runtime_error("failed to read UP pattern dims");
+					if(!is.read((char*)&dStart, sizeof(int32_t)    )) throw std::runtime_error("failed to read UP data start"  );
+
+					//fill in defaults for optional data
+					extPat = 0;
+					scnDim[0] = scnDim[1] = -1;
+					hexFlg = 0;
+					scnRes[0] = scnRes[1] = NAN;
+
+					//detect version 0: {width, height, raw data}
+					if(patDim[0] < 1 || patDim[1] < 1 || patDim[0] > 5000 || patDim[1] > 5000 || dStart < 0) {
+						if(vers > 2) {
+							patDim[1] = patDim[0];
+							patDim[0] = vers;
+							vers = 0;
+							dStart = 8;
+							return is;
+						}
+						throw std::runtime_error("invalid UP file");
+					}
+
+					//next version specific code
+					switch(vers) {
+						case 1: break;//we already read the whole header
+						case 2://intentional fall through (same as version 3)
+						case 3:
+							if(!is.read((char*)&extPat, sizeof(int8_t )    )) throw std::runtime_error("failed to read UP extra patterns" );
+							if(!is.read((char*) scnDim, sizeof(int32_t) * 2)) throw std::runtime_error("failed to read UP scan dimensions");
+							if(!is.read((char*)&hexFlg, sizeof(int8_t )    )) throw std::runtime_error("failed to read UP grid type flag" );
+							if(!is.read((char*) scnRes, sizeof(double ) * 2)) throw std::runtime_error("failed to read UP scan resolution");
+						break;
+
+						default: throw std::runtime_error("unsupported UP file version");
+					}
+
+					//we can calculate the number of patterns without a file size for version 2/3 files here
+					//square grid (hexFlg == 0): scnDim[0] * scnDim[1]
+					//hex grid and    extra pattern (hexFlg == 1, extPat == 1): scnDim[0] * scnDim[1]
+					//hex grid and no extra pattern (hexFlg == 1, extPat == 0): scnDim[0] * scnDim[1] - scnDim[1] / 2
+
+					return is;
+				}
+			};
+
 		}
 
 		//@brief   : set pattern shape
@@ -365,33 +430,21 @@ namespace emsphinx {
 			//read based on file extension
 			if(0 == ext.compare("up1") || 0 == ext.compare("up2")) {
 				//open file and read header
-				int32_t header[4];
+				detail::UpHeader header;
 				{
 					//read header
 					std::ifstream is(name, std::ios::in | std::ios::binary);
-					is.read((char*)header, 4 * sizeof(int32_t));
+					header.read(is);
 				}
 
-				//parse header (logic here courtesy of stuart)
-				int32_t& vers    = header[0];//up* file version
-				int32_t& width   = header[1];//pattern width in pixels
-				int32_t& height  = header[2];//pattern width in pixels
-				int32_t& dStart  = header[3];//data start position
-				if(width < 1 || height < 1 || width > 5000 || height > 5000 || dStart < 0) {
-					if(vers > 2) {
-						height = width;
-						width = vers;
-						dStart = 8;
-					}
-					if(width < 1 || height < 1 || width > 5000 || height > 5000 || dStart < 0) throw std::runtime_error("invalid UP file");
-				}
-				if((0 != px && px != width) || (0 != py && py != height)) throw std::runtime_error("patterns aren't expected shape");
+				//sanity check header 
+				if((0 != px && px != header.patDim[0]) || (0 != py && py != header.patDim[1])) throw std::runtime_error("patterns aren't expected shape");
 				const Bits b = 0 == ext.compare("up1") ? ImageSource::Bits::U8 : ImageSource::Bits::U16;
 
 				//construct with either ifstream
 				std::shared_ptr<IfStreamedPatternFile> ptr = std::make_shared<IfStreamedPatternFile>(name);//memory map entire file
-				ptr->setShape((size_t)width, (size_t)height, b);
-				ptr->setOffset(dStart);
+				ptr->setShape((size_t)header.patDim[0], (size_t)header.patDim[1], b);
+				ptr->setOffset(header.dStart);
 				ptr->flp = true;//EDAX files need to be flipped
 				return std::shared_ptr<PatternFile>(ptr);
 			} else if(0 == ext.compare("h5") || 0 == ext.compare("hdf") || 0 == ext.compare("hdf5")) {
