@@ -49,6 +49,8 @@ Extract Master Projection... extract a stereographic master pattern projection f
 
 Please note that wisdom is hardware specific and for best performance shouldn't be shared between platforms. 
 
+.. _FFTW Words of Wisdom: http://www.fftw.org/fftw3_doc/Words-of-Wisdom_002dSaving-Plans.html
+
 Help Menu
 ************************************
 

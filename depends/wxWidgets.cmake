@@ -79,6 +79,7 @@ if(EMSPHINX_BUILD_wxWidgets)
 	if(APPLE)
 		set(wxUSE_WEBKIT OFF CACHE BOOL "use wxWebKitCtrl (Mac-only, use wxWebView instead)")
 		set(wxUSE_WEBVIEW_WEBKIT OFF CACHE BOOL "use wxWebView WebKit background")
+		set(wxUSE_LIBSDL OFF CACHE BOOL "Use SDL for wxSound implementation.")
 	endif()
 
 	FetchContent_MakeAvailable(wxWidgets)
