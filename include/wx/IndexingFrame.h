@@ -710,7 +710,8 @@ void IndexingFrame::startIdx() {
 					Timer::PrintSeconds(elapsed  , ss);
 					ss << " elapsed, ";
 					Timer::PrintSeconds(remaining, ss);
-					ss << " remaining   ";
+					ss << " remaining (";
+					ss << std::fixed << std::setprecision(2) << float(idxData.idxCtr) / elapsed << " pat/s)";
 					evt.SetString(ss.str());
 					evt.SetInt(std::min((int)(percent * 100 + 0.5), 100));
 					wxPostEvent(this, evt);
