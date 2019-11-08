@@ -55,6 +55,8 @@ if(${EMSPHINX_BUILD_GUIS})
 	endif()
 
 	add_executable(EMSphInxEBSD WIN32 MACOSX_BUNDLE ${CMAKE_CURRENT_LIST_DIR}/ebsd_wizard.cpp ${SPHINX_ICON})
+	set_target_properties(EMSphInxEBSD PROPERTIES
+        MACOSX_BUNDLE_INFO_PLIST ${CMAKE_CURRENT_LIST_DIR}/MacOSXBundleInfo.plist.in)
 endif()
 
 ################################

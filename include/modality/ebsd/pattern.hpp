@@ -258,6 +258,7 @@ namespace emsphinx {
 #include <cctype>
 #include <sstream>
 #include <stack>
+#include <cmath>
 
 namespace emsphinx {
 	
