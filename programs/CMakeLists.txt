@@ -44,6 +44,8 @@ add_executable(mp2sht        ${CMAKE_CURRENT_LIST_DIR}/mp2sht.cpp        )
 add_executable(sht2png       ${CMAKE_CURRENT_LIST_DIR}/sht2png.cpp       )
 add_executable(ShtWisdom     ${CMAKE_CURRENT_LIST_DIR}/sht_wisdom.cpp    )
 
+install(TARGETS IndexEBSD MasterXcorr mp2sht sht2png ShtWisdom COMPONENT clt DESTINATION "${CMAKE_INSTALL_PREFIX}/bin/") # command line tools
+
 if(${EMSPHINX_BUILD_GUIS})
 
 	set(MACOSX_BUNDLE_ICON_FILE sphinx.icns) # add icon to Info.plist
@@ -57,6 +59,7 @@ if(${EMSPHINX_BUILD_GUIS})
 	add_executable(EMSphInxEBSD WIN32 MACOSX_BUNDLE ${CMAKE_CURRENT_LIST_DIR}/ebsd_wizard.cpp ${SPHINX_ICON})
 	set_target_properties(EMSphInxEBSD PROPERTIES
         MACOSX_BUNDLE_INFO_PLIST ${CMAKE_CURRENT_LIST_DIR}/MacOSXBundleInfo.plist.in)
+	install(TARGETS EMSphInxEBSD COMPONENT gui DESTINATION "${CMAKE_INSTALL_PREFIX}/bin/") # command line tools
 endif()
 
 ################################

@@ -197,3 +197,101 @@ endif()
 
 # add actual programs
 include(${CMAKE_CURRENT_LIST_DIR}/programs/CMakeLists.txt) # include instead of add_subdirectory so we don't get a subfolder in the build
+
+################################
+#        build installer       #
+################################
+
+set(CPACK_PACKAGE_DESCRIPTION_SUMMARY "spherical harmonic based indexing of diffraction patterns https://github.com/emsoft-org/EMSphInx/")
+set(CPACK_PACKAGE_NAME "emsphinx")
+set(CPACK_PACKAGE_VERSION "${EMSPHINX_GIT_HASH}")
+set(CPACK_PACKAGE_VENDOR "emsoft-org")
+#CPACK_PACKAGE_DESCRIPTION_FILE
+
+if(WIN32 OR MSVC)
+	# windows
+	set(CPACK_GENERATOR "ZIP") # we could also use NSIS if things get more complicated
+elseif(APPLE)
+	# osx
+	set(CPACK_GENERATOR "DragNDrop") # we could also use PackageMaker, OSXX11, or Bundle
+elseif(UNIX)
+	# linux, try to determine best package type
+	# start by searching for common package builders
+	find_program(rpmbuild)
+	find_program(dpkg)
+	if(rpmbuild_FOUND)
+		# red hat based systems are more likely to have a deb builder than vice versa
+		set(CPACK_GENERATOR "RPM")
+		# CPACK_RPM_PACKAGE_ARCHITECTURE
+		# CPACK_RPM_PACKAGE_RELEASE
+		# CPACK_RPM_PACKAGE_LICENSE
+		# CPACK_RPM_PACKAGE_GROUP
+		# CPACK_RPM_PACKAGE_PROVIDES
+
+		# rpm dependencies
+		if(NOT EMSPHINX_BUILD_FFTW)
+			if(NOT CPACK_RPM_PACKAGE_REQUIRES)
+				set(CPACK_RPM_PACKAGE_REQUIRES "fftw >= 3.3.7")
+			else()
+				set(CPACK_RPM_PACKAGE_REQUIRES "${CPACK_RPM_PACKAGE_REQUIRES}, fftw >= 3.3.7")
+			endif()
+		endif()
+
+		if(NOT EMSPHINX_BUILD_HDF5)
+			if(NOT CPACK_RPM_PACKAGE_REQUIRES)
+				set(CPACK_RPM_PACKAGE_REQUIRES "hdf5 >= 1.8.20")
+			else()
+				set(CPACK_RPM_PACKAGE_REQUIRES "${CPACK_RPM_PACKAGE_REQUIRES}, hdf5 >= 1.8.20")
+			endif()
+		endif()
+
+		if(EMSPHINX_BUILD_GUIS AND NOT EMSPHINX_BUILD_wxWidgets)
+			if(NOT CPACK_RPM_PACKAGE_REQUIRES)
+				set(CPACK_RPM_PACKAGE_REQUIRES "libwx >= 3.1.2")
+			else()
+				set(CPACK_RPM_PACKAGE_REQUIRES "${CPACK_RPM_PACKAGE_REQUIRES}, libwx >= 3.1.2")
+			endif()
+		endif()
+
+	elseif(dpkg_FOUND)
+		# debian type system
+		set(CPACK_GENERATOR "DEB")
+		set(CPACK_DEBIAN_PACKAGE_MAINTAINER "wlenthe") # required
+		set(CPACK_DEBIAN_PACKAGE_VERSION "${EMSPHINX_GIT_HASH}") # required for control (default is CPACK_PACKAGE_VERSION)
+		
+		# apt dependencies
+		if(NOT EMSPHINX_BUILD_FFTW)
+			if(NOT CPACK_DEBIAN_PACKAGE_DEPENDS)
+				set(CPACK_DEBIAN_PACKAGE_DEPENDS "libfftw3-3 (>= 3.3.7)")
+			else()
+				set(CPACK_DEBIAN_PACKAGE_DEPENDS "${CPACK_DEBIAN_PACKAGE_DEPENDS}, libfftw3-3 (>= 3.3.7)")
+			endif()
+		endif()
+
+		if(NOT EMSPHINX_BUILD_HDF5)
+			if(NOT CPACK_DEBIAN_PACKAGE_DEPENDS)
+				set(CPACK_DEBIAN_PACKAGE_DEPENDS "libhdf5-cpp-100 (>= 1.8.20)")
+			else()
+				set(CPACK_DEBIAN_PACKAGE_DEPENDS "${CPACK_DEBIAN_PACKAGE_DEPENDS}, libhdf5-cpp-100 (>= 1.8.20)")
+			endif()
+		endif()
+
+		# 3.1 isn't actually packaged so this won't work right now...
+		if(EMSPHINX_BUILD_GUIS AND NOT EMSPHINX_BUILD_wxWidgets)
+			if(NOT CPACK_DEBIAN_PACKAGE_DEPENDS)
+				set(CPACK_DEBIAN_PACKAGE_DEPENDS "libwxgtk3.1 (>= 3.1.2)")
+			else()
+				set(CPACK_DEBIAN_PACKAGE_DEPENDS "${CPACK_DEBIAN_PACKAGE_DEPENDS}, libwxgtk3.1 (>= 3.1.2)")
+			endif()
+		endif()
+
+	else()
+		# some other linux flavor
+		set(CPACK_GENERATOR "TZ")
+	endif()
+
+else()
+	message(FATAL_ERROR "couldn't determine OS for package building")
+endif()
+
+include(CPack)
