@@ -217,8 +217,8 @@ elseif(APPLE)
 elseif(UNIX)
 	# linux, try to determine best package type
 	# start by searching for common package builders
-	find_program(rpmbuild)
-	find_program(dpkg)
+	find_program(rpmbuild NAMES rpmbuild)
+	find_program(dpkg NAMES dpkg)
 	if(rpmbuild_FOUND)
 		# red hat based systems are more likely to have a deb builder than vice versa
 		set(CPACK_GENERATOR "RPM")
