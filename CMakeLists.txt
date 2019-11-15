@@ -219,7 +219,7 @@ elseif(UNIX)
 	# start by searching for common package builders
 	find_program(rpmbuild NAMES rpmbuild)
 	find_program(dpkg NAMES dpkg)
-	if(rpmbuild_FOUND)
+	if(rpmbuild)
 		# red hat based systems are more likely to have a deb builder than vice versa
 		set(CPACK_GENERATOR "RPM")
 		# CPACK_RPM_PACKAGE_ARCHITECTURE
@@ -253,7 +253,7 @@ elseif(UNIX)
 			endif()
 		endif()
 
-	elseif(dpkg_FOUND)
+	elseif(dpkg)
 		# debian type system
 		set(CPACK_GENERATOR "DEB")
 		set(CPACK_DEBIAN_PACKAGE_MAINTAINER "wlenthe") # required
