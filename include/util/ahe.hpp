@@ -146,7 +146,7 @@ void AdaptiveHistogramEqualizer<Real, TPix>::setSize(const size_t w, const size_
 	}
 
 	//compute y interpolation once
-	jInds.resize(w);
+	jInds.resize(h);
 	for(size_t j = 0; j < h; j++) {
 		const size_t u = std::distance(jMids.cbegin(), std::upper_bound(jMids.cbegin(), jMids.cend(), j));
 		if(jMids.size() == u) {//beyond last grid point
@@ -166,7 +166,7 @@ void AdaptiveHistogramEqualizer<Real, TPix>::setSize(const size_t w, const size_
 	}
 
 	//compute x interpolation once
-	iInds.resize(h);
+	iInds.resize(w);
 	for(size_t i = 0; i < w; i++) {
 		const size_t u = std::distance(iMids.cbegin(), std::upper_bound(iMids.cbegin(), iMids.cend(), i));
 		if(iMids.size() == u) {//beyond last grid point
