@@ -327,6 +327,7 @@ namespace emsphinx {
 							if(!is.read((char*)&hexFlg, sizeof(int8_t )    )) throw std::runtime_error("failed to read UP grid type flag" );
 							if(!is.read((char*) scnRes, sizeof(double ) * 2)) throw std::runtime_error("failed to read UP scan resolution");
 						break;
+						case 4: break;//crude hack - pretend v4 UP-file format associated with APEX is v1 format. Ignore extra header data and only use square scans.
 
 						default: throw std::runtime_error("unsupported UP file version");
 					}
