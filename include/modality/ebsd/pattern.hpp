@@ -465,6 +465,7 @@ namespace emsphinx {
 					if     ("EDAX"     == vendor) vendorFlip = true ;
 					else if("Oxford"   == vendor) vendorFlip = false;
 					else if("Bruker"   == vendor) vendorFlip = false;
+					else if("Bruker Nano" == vendor) vendorFlip = false;//h5 files from BCF -> H5 converter software
 					else if("DREAM.3D" == vendor) vendorFlip = false;
 					else if("EMsoft"   == vendor) vendorFlip = true;
 					else throw std::runtime_error("unknown EBSD vendor: " + vendor);
