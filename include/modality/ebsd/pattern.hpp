@@ -327,6 +327,7 @@ namespace emsphinx {
 							if(!is.read((char*)&hexFlg, sizeof(int8_t )    )) throw std::runtime_error("failed to read UP grid type flag" );
 							if(!is.read((char*) scnRes, sizeof(double ) * 2)) throw std::runtime_error("failed to read UP scan resolution");
 						break;
+						case 4: break;//crude hack - pretend v4 UP-file format associated with APEX is v1 format. Ignore extra header data and only use square scans.
 
 						default: throw std::runtime_error("unsupported UP file version");
 					}
@@ -464,6 +465,7 @@ namespace emsphinx {
 					if     ("EDAX"     == vendor) vendorFlip = true ;
 					else if("Oxford"   == vendor) vendorFlip = false;
 					else if("Bruker"   == vendor) vendorFlip = false;
+					else if("Bruker Nano" == vendor) vendorFlip = false;//h5 files from BCF -> H5 converter software
 					else if("DREAM.3D" == vendor) vendorFlip = false;
 					else if("EMsoft"   == vendor) vendorFlip = true;
 					else throw std::runtime_error("unknown EBSD vendor: " + vendor);
@@ -765,25 +767,37 @@ namespace emsphinx {
 			   0xFF != header[6] ||
 			   0xFF != header[7]) throw std::runtime_error("unexpected header for " + name);//check header
 			if(!ifs.read((char*)&offset, sizeof(offset))) throw std::runtime_error("failed to read first pattern position from " + name);//read offset to first pattern
-			const size_t numPat = size_t( (offset - 8) / 8 );//compute pattern count from offset to first pattern
+
+			//ISSUE! Order of offset values is only APPROXIMATELY linear, sometimes they are "out of order". 
+			//Old code crashes if first offset is not first pattern; commented this out.
+			//Shifted pattern header read block earlier to allow reliable numPats calculation from file size and pattern size.
+
+			//Seek to the first pattern and get some info
+			//each pattern block has a 16 byte header, some (maybe 0) padding space, the pattern, and then 18 tail bytes:
+			// uint8_t x position
+			// double  x position (in microns)
+			// uint8_t y position
+			// double  y position (in microns)
+			ifs.seekg(offset);
+			uint32_t leadIn, width, height, bytes;
+			if (!ifs.read((char*)&leadIn, sizeof(uint32_t))) throw std::runtime_error("failed to read lead in of first pattern in " + name);
+			if (!ifs.read((char*)&height, sizeof(uint32_t))) throw std::runtime_error("failed to read width of first pattern in " + name);
+			if (!ifs.read((char*)&width, sizeof(uint32_t))) throw std::runtime_error("failed to read height of first pattern in " + name);
+			if (!ifs.read((char*)&bytes, sizeof(uint32_t))) throw std::runtime_error("failed to read bytes of first pattern in " + name);
+
+			//experimental code below
+			ifs.seekg(0, std::ios::end);
+			const size_t fsize = ifs.tellg();
+			//each pattern has 8 byte offset, 16 byte header, and 18 byte footer = 42 bytes + pattern bytes
+			const size_t numPat = size_t(fsize / (bytes + 42));//compute pattern count from file size
 
 			//now read all the offsets at once
 			ifs.seekg(8);//go back to first index
 			std::vector<uint64_t> offsets(numPat);//save space to hold all offsets
 			if(!ifs.read((char*)offsets.data(), sizeof(uint64_t) * offsets.size())) throw std::runtime_error("failed to read offsets from " + name);
 
-			//next seek to the first pattern and get some info
-			//each pattern block has a 16 byte header, some (maybe 0) padding space, the pattern, and then 18 tail bytes:
-			// uint8_t x position
-			// double  x position (in microns)
-			// uint8_t y position
-			// double  y position (in microns)
-			ifs.seekg(offsets[0]);
-			uint32_t leadIn, width, height, bytes;
-			if(!ifs.read((char*)&leadIn, sizeof(uint32_t))) throw std::runtime_error("failed to read lead in of first pattern in " + name);
-			if(!ifs.read((char*)&height, sizeof(uint32_t))) throw std::runtime_error("failed to read width of first pattern in " + name);
-			if(!ifs.read((char*)&width , sizeof(uint32_t))) throw std::runtime_error("failed to read height of first pattern in " + name);
-			if(!ifs.read((char*)&bytes , sizeof(uint32_t))) throw std::runtime_error("failed to read bytes of first pattern in " + name);
+			//now that we have ALL offsets, make sure "offset" is actually the lowest value from them
+			offset = *std::min_element(offsets.begin(), offsets.end());
 
 			//parse the bit depth
 			Bits bits;

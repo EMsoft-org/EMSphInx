@@ -97,6 +97,12 @@ MpConvertDialog::MpConvertDialog( wxWindow* parent, wxWindowID id, const wxStrin
 	this->SetSizeHints( wxDefaultSize, wxDefaultSize );
 
 	valBw.SetRange(64, 512);
+	/*
+	Unwanted behavior here! If this is active and the text entry field is blank, numbers cannot be typed in.
+	This is because any single-digit value (0-9) is below the minimum value allowed and will therefore be rejected.
+	While typing in a number will not work, copying and pasting a value will work - including for values outside of the allowed range.
+	Not sure how this reacts to the above, so I simply removed it from line 126 instead. I still don't recommend going below 64 or above ~1000.
+	*/
 
 	wxFlexGridSizer* fgSizer = new wxFlexGridSizer( 7, 2, 0, 0 );
 	fgSizer->AddGrowableCol( 1 );
@@ -118,7 +124,7 @@ MpConvertDialog::MpConvertDialog( wxWindow* parent, wxWindowID id, const wxStrin
 	m_txtForm = new wxTextCtrl      ( this, wxID_ANY, wxT("Unknown"), wxDefaultPosition, wxDefaultSize, 0        );
 	m_txtName = new wxTextCtrl      ( this, wxID_ANY, wxEmptyString , wxDefaultPosition, wxDefaultSize, 0        );
 	m_txtSSyb = new wxTextCtrl      ( this, wxID_ANY, wxEmptyString , wxDefaultPosition, wxDefaultSize, 0        );
-	m_txtBw   = new wxTextCtrl      ( this, wxID_ANY, wxT("384"    ), wxDefaultPosition, wxDefaultSize, 0, valBw );
+	m_txtBw   = new wxTextCtrl      ( this, wxID_ANY, wxT("384"    ), wxDefaultPosition, wxDefaultSize, 0        );
 	m_fileOut = new wxFilePickerCtrl( this, wxID_ANY, wxEmptyString , wxT("Output Master Pattern"), wxT("*.sht"), wxDefaultPosition, wxDefaultSize, wxFLP_OVERWRITE_PROMPT|wxFLP_SAVE|wxFLP_SMALL|wxFLP_USE_TEXTCTRL );
 
 	m_button = new wxButton( this, wxID_ANY, wxT("Convert"), wxDefaultPosition, wxDefaultSize, 0 );
@@ -342,8 +348,8 @@ void MpConvertDialog::OnInputChanged  ( wxFileDirPickerEvent& event ) {
 	//if we made it this far we were able to parse a formula, fill in, set default bandwidth, and set output file
 	wxFileName fn = event.GetPath();
 	fn.SetExt("sht");
-	m_txtForm->ChangeValue(ss.str());
-	m_txtBw->ChangeValue("384");
+	m_txtForm->ChangeValue(ss.str());//Overrides any manual formula input with formula constructed from EMsoft master pattern data file.
+	//m_txtBw->ChangeValue("384");//Overrides any manual conversion bandwidth input with fixed value. Commented out to allow GUI selection of conversion BW.
 	m_fileOut->SetFileName(fn);
 	m_button->Enable(true);
 }
