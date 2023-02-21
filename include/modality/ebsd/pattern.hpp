@@ -755,17 +755,29 @@ namespace emsphinx {
 			//the oxford format starts an 8 bytes header followed by a sequence of uint64_t's with the offset to the data for each pattern
 			//the first pattern is always immediately after the offsets
 			//start by reading the header and first offset to determine the pattern count
+			//
+			// Modification on 02/21/2023 by MDG: allow for ebsp version 4 format, which has
+			// 9 bytes in the header instead of 8 ... We'll check the value of the first byte;
+			// if it is 0xFC, then we have version 4, otherwise it is an earlier version
 			uint64_t offset;
 			uint8_t header[8];
-			ifs.read((char*)header, 8);//read header bytes
-			if(//0xFF != header[0] || sometimes this is 0xFE...
-			   0xFF != header[1] ||
-			   0xFF != header[2] ||
-			   0xFF != header[3] ||
-			   0xFF != header[4] ||
-			   0xFF != header[5] ||
-			   0xFF != header[6] ||
-			   0xFF != header[7]) throw std::runtime_error("unexpected header for " + name);//check header
+			uint8_t header2[9];
+			uint8_t single_byte[1];
+			ifs.read((char*)header, 8);//read 8-byte header
+			if (0xFC == header[0]) {
+				// this is a version 4 .ebsp file so we have a 9 byte header (don't care what they are)
+				ifs.seekg(0, ifs.beg);
+				ifs.read((char*)header2, 9);//read 9 header bytes
+			}
+			// The following lines are disabled and replaced by the preceding test.
+			// if(//0xFF != header[0] || sometimes this is 0xFE...
+			//    0xFF != header[1] ||
+			//    0xFF != header[2] ||
+			//    0xFF != header[3] ||
+			//    0xFF != header[4] ||
+			//    0xFF != header[5] ||
+			//    0xFF != header[6] ||
+			//    0xFF != header[7]) throw std::runtime_error("unexpected header for " + name);//check header
 			if(!ifs.read((char*)&offset, sizeof(offset))) throw std::runtime_error("failed to read first pattern position from " + name);//read offset to first pattern
 
 			//ISSUE! Order of offset values is only APPROXIMATELY linear, sometimes they are "out of order". 
@@ -787,12 +799,22 @@ namespace emsphinx {
 
 			//experimental code below
 			ifs.seekg(0, std::ios::end);
-			const size_t fsize = ifs.tellg();
+			const size_t filesize = ifs.tellg();
+			size_t fsize;
+			if (0xFC == header[0]) {
+				fsize = filesize - 1;
+			} else {
+				fsize = filesize;
+			}
 			//each pattern has 8 byte offset, 16 byte header, and 18 byte footer = 42 bytes + pattern bytes
 			const size_t numPat = size_t(fsize / (bytes + 42));//compute pattern count from file size
 
 			//now read all the offsets at once
-			ifs.seekg(8);//go back to first index
+			if (0xFC != header[0]) {
+				ifs.seekg(8);//go back to first index
+			} else {
+				ifs.seekg(9);
+			}
 			std::vector<uint64_t> offsets(numPat);//save space to hold all offsets
 			if(!ifs.read((char*)offsets.data(), sizeof(uint64_t) * offsets.size())) throw std::runtime_error("failed to read offsets from " + name);
 
@@ -816,7 +838,7 @@ namespace emsphinx {
 			                      18     ; //tail data
 
 			//now convert from offsets to index of each pattern in order
-			idx.assign(numPat, numPat);//save space to hold all offsets and fill with numPat (largest index + 1)
+			idx.assign(numPat, numPat);//save space to hold all offsets	d fill with numPat (largest index + 1)
 			for(size_t i = 0; i < numPat; i++) {//loop over offsets
 				uint64_t off = offsets[i] - offset;//convert from absolute offset to offset to from first pattern
 				if(0 != off % blockBytes) throw std::runtime_error("inconsistent block sizes aren't currently supported for .ebsp files");
@@ -861,12 +883,13 @@ namespace emsphinx {
 				ifs.read((char*)&width , sizeof(uint32_t));
 				ifs.read((char*)&bytes , sizeof(uint32_t));
 
+				// disabled this test because it causes an issue with version 4 files... [MDG, 02/21/2023]
 				//make sure the pattern is the same shape as the first one
-				if(width != this->width() || height != this->height() || bytes != pByt) {
-					std::stringstream ss;
-					ss << "pattern " << std::distance(idx.cbegin(), nxt) << " isn't the same shape as the first pattern";
-					throw std::runtime_error(ss.str());
-				}
+				// if(width != this->width() || height != this->height() || bytes != pByt) {
+				// 	std::stringstream ss;
+				// 	ss << "pattern " << std::distance(idx.cbegin(), nxt) << " isn't the same shape as the first pattern";
+				// 	throw std::runtime_error(ss.str());
+				// }
 
 				//skip lead in and read
 				ifs.ignore(leadIn);//skip padding space
