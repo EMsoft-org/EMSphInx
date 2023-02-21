@@ -46,7 +46,7 @@ option(EMSPHINX_BUILD_SHARED "should shared or static libraries be preferred"   
 option(EMSPHINX_FFTW_F       "enable float templates by linking against fftw_f"                                         OFF)
 option(EMSPHINX_FFTW_D       "enable double templates by linking against fftw"                                          ON )
 option(EMSPHINX_FFTW_L       "enable long double templates by linking against fftw_l"                                   OFF)
-option(EMSPHINX_BUILD_FFTW   "fetch and build FFTW instead of using an existing system installation"                    OFF)
+option(EMSPHINX_BUILD_FFTW   "fetch and build FFTW instead of using an existing system installation"                    ON )
 option(EMSPHINX_FFTW_SIMD    "should SSE/SSE2/AVX instructions be enabled for fftw build (faster run, slower compiler)" ON )
 option(EMSPHINX_FFTW_AVX2    "should AVX2 instructions be enabled for fftw build (not supported on all processors)    " OFF)
 option(EMSPHINX_BUILD_HDF5   "fetch and build HDF5 instead of using an existing system installation"               ON )
