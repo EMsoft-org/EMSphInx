@@ -21,6 +21,8 @@ Download the source
 
 > git clone https://github.com/EMsoft-org/EMSphInx
 
+**[When building this on Mac OS X with an ARM processor (M1 or higher), please edit the top CMakeLists.txt file and turn the option EMSPHINX_FFTW_SIMD to OFF on line 50. MDG, 02/21/2023]**
+
 Create a build directory and move into it
 
 > mkdir EMSphInxBuild
