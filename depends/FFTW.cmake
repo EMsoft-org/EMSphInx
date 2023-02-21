@@ -59,7 +59,7 @@ set(FFTW_DEPENDS "") # store all fftw dependencies here
 
 if(EMSPHINX_BUILD_FFTW) # download + build fftw
 	# version of fftw to build, any version 3+ should be fine
-	set(FFTW_VER "3.3.10")
+	set(FFTW_VER "3.3.7")
 	
 	# name to use for projects (folder name for build + internal cmake variable name)
 	set(FFTW_NAME_F fftwf)
