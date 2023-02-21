@@ -35,6 +35,7 @@
 #ifndef _position_h_
 #define _position_h_
 
+#include <limits>
 #include <string>
 #include <vector>
 

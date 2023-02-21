@@ -42,7 +42,7 @@ set(HDF5_LIBRARIES "") # store all hdf5 libraries to link against here
 
 if(EMSPHINX_BUILD_HDF5)
 	set(HDF5_VERS "hdf5-1_8_20") # version of hdf5 to build, 1_10_x requires cmake 3.10 or newer
-	set(HDF5_URL "https://bitbucket.hdfgroup.org/scm/hdffv/hdf5.git") # git repo to fetch hdf5 source from
+	set(HDF5_URL "https://github.com/HDFGroup/hdf5.git") # git repo to fetch hdf5 source from
 	set(HDF5_OPTIONS -DBUILD_TESTING=OFF -DHDF5_BUILD_EXAMPLES=OFF -DHDF5_BUILD_TOOLS=OFF -DHDF5_DISABLE_COMPILER_WARNINGS=ON -DHDF5_BUILD_HL_LIB=OFF) # build options (arguments for ccmake)
 	set(HDF5_BUILD_DIR ${CMAKE_CURRENT_BINARY_DIR}/hdf5) # location to build
 

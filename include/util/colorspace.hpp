@@ -32,6 +32,7 @@
  *                                                                     *
  * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
 
+#include <limits>
 
 #ifndef _COLORSPACE_H_
 #define _COLORSPACE_H_
