@@ -404,51 +404,54 @@ namespace emsphinx {
 
 				//loop over patterns indexing
 				std::vector< emsphinx::Result<Real> > res(om.size());//we need a result for each map
-				for(const size_t i : indices) {//loop over indices to index (may not be contiguous or in order)
-					if(0x00 != msk[i]) {//do we need to index and/or refine this point?
-						if(0x01 & msk[i]) {//reindexing requested
-							const bool ref = 0x02 & msk[i];//should we refine?
-							try {
-								idx[id]->indexImage((TPix*)ptr, res.data(), res.size(), ref);//index pattern
-								for(size_t j = 0; j < res.size(); j++) {
-									std::copy(res[j].qu, res[j].qu+4, om[j].qu[i].data());//save orientation
-									om[j].metric[i] =               res[j].corr ;//save cross correlation
-									om[j].imQual[i] =               res[j].iq   ;//image quality
-									om[j].phase [i] = (uint_fast8_t)res[j].phase;//save phase
+				const size_t numpatterns = pat->numPat();
+				for(const size_t i : indices){//loop over indices to index (may not be contiguous or in order)
+					if(i < numpatterns){ //don't index more patterns than there are
+						if(0x00 != msk[i]) {//do we need to index and/or refine this point?
+							if(0x01 & msk[i]) {//reindexing requested
+								const bool ref = 0x02 & msk[i];//should we refine?
+								try {
+									idx[id]->indexImage((TPix*)ptr, res.data(), res.size(), ref);//index pattern
+									for(size_t j = 0; j < res.size(); j++) {
+										std::copy(res[j].qu, res[j].qu+4, om[j].qu[i].data());//save orientation
+										om[j].metric[i] =               res[j].corr ;//save cross correlation
+										om[j].imQual[i] =               res[j].iq   ;//image quality
+										om[j].phase [i] = (uint_fast8_t)res[j].phase;//save phase
+									}
+									std::fill(ipf + 3 * i, ipf + 3 * i + 3, 0);
+									xtal::quat::rotateVector(res[0].qu, n, nx);
+									if (-1 == res[0].phase) {
+										std::fill(rgb, rgb + 3, Real(0));
+									} else {
+										om[0].phsList[res[0].phase].pg.ipfColor(nx, rgb, h2r);
+									}
+									std::transform(rgb, rgb+3, ipf + 3 * i, [](const Real& v){return (char) std::round(v * 255);});
+								} catch (std::exception&) {// e) {
+									// std::cout << i << ": " << e.what() << '\n';//don't let one exception stop everything
+									for(size_t j = 0; j < res.size(); j++) {
+										om[j].qu[i].w = 1;
+										om[j].qu[i].x = om[j].qu[i].y = om[j].qu[i].z = 0;
+										om[j].metric[i] = 0;
+										om[j].imQual[i] = 0;
+										om[j].phase [i] = (uint_fast8_t)-1;
+									}
+									std::fill(ipf + 3 * i, ipf + 3 * i + 3, 0);
 								}
-								std::fill(ipf + 3 * i, ipf + 3 * i + 3, 0);
-								xtal::quat::rotateVector(res[0].qu, n, nx);
-								if (-1 == res[0].phase) {
-									std::fill(rgb, rgb + 3, Real(0));
-								} else {
-									om[0].phsList[res[0].phase].pg.ipfColor(nx, rgb, h2r);
+							} else if(0x02 & msk[i]) {//only refinement requested
+								try {
+									//this currently only uses a single result but it could be modified
+									res[0].phase = om[0].phase[i];
+									std::copy(om[0].qu[i].data(), om[0].qu[i].data()+4, res[0].qu);//copy original orientation
+									idx[id]->refineImage((TPix*)ptr, res[0]);//refine orientation using pattern
+									std::copy(res[0].qu, res[0].qu+4, om[0].qu[i].data());//save orientation
+									om[0].metric[i] = res[0].corr ;//save cross correlation
+									om[0].imQual[i] = res[0].iq   ;//image quality
+								} catch (std::exception&) {// e) {
+									// std::cout << i << ": " << e.what() << '\n';//don't let one exception stop everything
 								}
-								std::transform(rgb, rgb+3, ipf + 3 * i, [](const Real& v){return (char) std::round(v * 255);});
-							} catch (std::exception&) {// e) {
-								// std::cout << i << ": " << e.what() << '\n';//don't let one exception stop everything
-								for(size_t j = 0; j < res.size(); j++) {
-									om[j].qu[i].w = 1;
-									om[j].qu[i].x = om[j].qu[i].y = om[j].qu[i].z = 0;
-									om[j].metric[i] = 0;
-									om[j].imQual[i] = 0;
-									om[j].phase [i] = (uint_fast8_t)-1;
-								}
-								std::fill(ipf + 3 * i, ipf + 3 * i + 3, 0);
 							}
-						} else if(0x02 & msk[i]) {//only refinement requested
-							try {
-								//this currently only uses a single result but it could be modified
-								res[0].phase = om[0].phase[i];
-								std::copy(om[0].qu[i].data(), om[0].qu[i].data()+4, res[0].qu);//copy original orientation
-								idx[id]->refineImage((TPix*)ptr, res[0]);//refine orientation using pattern
-								std::copy(res[0].qu, res[0].qu+4, om[0].qu[i].data());//save orientation
-								om[0].metric[i] = res[0].corr ;//save cross correlation
-								om[0].imQual[i] = res[0].iq   ;//image quality
-							} catch (std::exception&) {// e) {
-								// std::cout << i << ": " << e.what() << '\n';//don't let one exception stop everything
-							}
+							ctr++;//increment indexed pattern count
 						}
-						ctr++;//increment indexed pattern count
 					}
 					ptr += bytes;//move to next pattern
 				}
