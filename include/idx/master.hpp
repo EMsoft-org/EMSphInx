@@ -570,7 +570,7 @@ namespace emsphinx {
 
 			//make area weighted average 0
 			const Real mean = ( std::inner_product(weights.cbegin(), weights.cend(), mp.nh.cbegin(), Real(0))
-			                +   std::inner_product(weights.cbegin(), weights.cend(), mp.sh.cbegin(), Real(0)) ) / totW ;
+			                +   std::inner_product(weights.cbegin(), weights.cend(), mp.sh.cbegin(), Real(0)) ) / (totW * 2) ;
 			std::for_each(mp.nh.begin(), mp.nh.end(), [mean](Real& v){v -= mean;});
 			std::for_each(mp.sh.begin(), mp.sh.end(), [mean](Real& v){v -= mean;});
 
