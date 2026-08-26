@@ -163,14 +163,17 @@ try {
 	while(!pool.waitAll(uptFreq)) {
 		//get the time elapsed since we started (without resetting the reference point)
 		const double elapsed = t.poll(false);
-		const double percent = double(idxData.idxCtr) / idxData.numIdx;
-		const double rate = elapsed / percent;//estimate seconds per %
-		const double remaining = rate * (1.0 - percent);//estimate seconds left
+		double frac = double(idxData.idxCtr) / idxData.numIdx;
+		if(frac > 1.0){
+			frac = 1.0;
+		}
+		const double rate = elapsed / frac;//estimate seconds per %
+		const double remaining = rate * (1.0 - frac);//estimate seconds left
 
 		//print update
 		std::cout << '\r';
 		Timer::PrintSeconds(elapsed  , std::cout);
-		std::cout << " elapsed, " << std::fixed << std::setprecision(1) << percent * 100          << "% complete, ";
+		std::cout << " elapsed, " << std::fixed << std::setprecision(1) << frac*100.0 << "% complete, ";
 		Timer::PrintSeconds(remaining, std::cout);
 		std::cout << " remaining   ";
 		std::cout.flush();
