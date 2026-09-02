@@ -266,8 +266,8 @@ namespace emsphinx {
 				std::vector<Real> sph(gridDim * gridDim * 2, 0);//spherical grid
 
 				//compute the SHT of the window function once
-				std::vector<Real> win(pat->numPix(), Real(1));//image of solid 1
-				prj->unproject(win.data(), sph.data());//unproject window function onto sphere
+				std::fill(sph.begin(), sph.end(), Real(0));
+				prj->mask(sph.data());
 				std::vector< std::complex<Real> > mlm(nml.bw * nml.bw);
 				sht.analyze(sph.data(), mlm.data());
 
